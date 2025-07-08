@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // 관계
+  guidelines         Guideline[]
+  uploadedFiles      UploadedFile[]
+  generatedContents  GeneratedContent[]
+  socialAccounts     SocialAccount[]
+  
+  @@map("users")
+}
+
+model SocialAccount {
+  id            String    @id @default(cuid())
+  userId        String
+  provider      String    // google, naver, kakao
+  providerId    String
+  email         String?
+  name          String?
+  accessToken   String?
+  refreshToken  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // 관계
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerId])
+  @@map("social_accounts")
+}
+
+model Guideline {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  content     String
+  tone        String
+  style       String
+  keywords    String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 관계
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("guidelines")
+}
+
+model UploadedFile {
+  id          String   @id @default(cuid())
+  userId      String
+  filename    String
+  originalName String
+  mimetype    String
+  size        Int
+  path        String
+  extractedText String?
+  createdAt   DateTime @default(now())
+  
+  // 관계
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("uploaded_files")
+}
+
+model GeneratedContent {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  content     String
+  contentType String
+  tags        String[]
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 관계
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("generated_contents")
+}

@@ -1,0 +1,61 @@
+{
+  "name": "blogcraft-backend",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "blog",
+    "content",
+    "ai",
+    "generation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "BlogCraft AI Blog Content Generation Service - Backend API",
+  "dependencies": {
+    "@prisma/client": "^6.11.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.0.10",
+    "axios": "^1.10.0",
+    "bcryptjs": "^3.0.2",
+    "cheerio": "^1.1.0",
+    "cloudinary": "^2.7.0",
+    "compromise": "^14.14.4",
+    "connect-mongo": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.1.0",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "korean-js": "^0.8.2",
+    "mammoth": "^1.9.1",
+    "multer": "^2.0.1",
+    "natural": "^8.1.0",
+    "node-html-parser": "^7.0.1",
+    "openai": "^5.8.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-kakao": "^1.0.1",
+    "passport-naver-v2": "^2.0.8",
+    "pdf-parse": "^1.1.1",
+    "prisma": "^6.11.1",
+    "sharp": "^0.34.2",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/express-session": "^1.18.2",
+    "@types/passport": "^1.0.17",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2"
+  }
+}

@@ -1,0 +1,212 @@
+# BlogCraft Production Web Service Development Rules
+
+## Project Overview
+BlogCraft is a commercial web service for generating high-quality blog content optimized for Naver Blog with AI filtering evasion and SEO optimization capabilities.
+
+### Core Business Objectives
+- Generate AI-undetectable, SEO-optimized blog content
+- Support multiple content sources (news, PDF, text files)
+- Automatic thumbnail generation
+- Naver Blog optimization
+- Commercial SaaS deployment ready
+
+## Technology Stack Requirements
+
+### Frontend (Vercel Deployment)
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand
+- **UI Components**: shadcn/ui
+- **Form Handling**: React Hook Form + Zod validation
+- **Authentication**: NextAuth.js
+
+### Backend (Railway Deployment)
+- **Framework**: Express.js
+- **Language**: TypeScript
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **File Storage**: Cloudinary
+- **Upload Handling**: Multer
+- **Authentication**: JWT
+
+### External APIs
+- **AI Models**: OpenAI GPT-4 / Claude API
+- **Image Generation**: DALL-E 3
+- **OAuth**: Google, Naver, Kakao
+- **File Processing**: pdf-parse, mammoth
+
+## Development Standards
+
+### Code Quality
+- Always use TypeScript with strict type checking
+- Implement proper error handling with try-catch blocks
+- Use Zod for runtime validation
+- Follow Next.js 14 App Router patterns
+- Implement proper loading states and error boundaries
+
+### Security Requirements
+- Implement rate limiting on all API endpoints
+- Use bcrypt for password hashing
+- JWT tokens with appropriate expiration
+- Input validation and sanitization
+- File upload restrictions and validation
+- CORS configuration for production
+
+### Performance Optimization
+- Implement Next.js Image optimization
+- Use proper caching strategies
+- Database query optimization with indexes
+- API response compression
+- Code splitting and lazy loading
+
+## Database Schema (PostgreSQL + Prisma)
+
+### Core Tables
+1. **users** - User management and authentication
+2. **content_guidelines** - User-defined content generation rules
+3. **source_data** - Uploaded files and extracted content
+4. **generated_content** - AI-generated blog posts with metadata
+
+### Key Fields
+- All tables use UUID primary keys
+- Timestamps for created_at/updated_at
+- JSONB for flexible metadata storage
+- Proper foreign key relationships
+
+## API Design Patterns
+
+### Endpoint Structure
+```
+/api/auth/*          - Authentication endpoints
+/api/guidelines/*    - Content guideline management
+/api/upload/*        - File upload and processing
+/api/content/*       - Content generation and management
+/api/image/*         - Thumbnail generation
+```
+
+### Response Format
+- Consistent JSON response structure
+- Proper HTTP status codes
+- Error handling with detailed messages
+- Pagination for list endpoints
+
+## AI Content Generation Rules
+
+### Anti-Detection Strategies
+- Implement human-like writing patterns
+- Variable sentence structures
+- Natural typos and colloquialisms
+- Personal experience integration
+- Keyword density optimization
+
+### SEO Optimization
+- Meta title and description generation
+- Structured data markup
+- Internal linking suggestions
+- Keyword optimization for Naver search
+
+## File Upload & Processing
+
+### Supported Formats
+- PDF files (text extraction)
+- DOC/DOCX files (mammoth processing)
+- TXT files (direct processing)
+- News article URLs (web scraping)
+
+### Processing Pipeline
+1. File validation and security checks
+2. Content extraction and preprocessing
+3. Text analysis and structuring
+4. Storage in database with metadata
+
+## Image Generation Specifications
+
+### Thumbnail Requirements
+- Size: 1080x1080px
+- Format: PNG/JPEG
+- Style: Clean, professional text-based design
+- Brand consistency
+- High readability fonts
+
+## Deployment Configuration
+
+### Environment Variables
+**Frontend (.env.local)**
+```
+NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_SECRET=production-secret
+GOOGLE_CLIENT_ID=google-oauth-id
+NAVER_CLIENT_ID=naver-oauth-id
+KAKAO_CLIENT_ID=kakao-oauth-id
+NEXT_PUBLIC_API_URL=https://api.your-domain.com
+```
+
+**Backend (.env)**
+```
+DATABASE_URL=postgresql://production-db-url
+JWT_SECRET=production-jwt-secret
+OPENAI_API_KEY=openai-api-key
+CLOUDINARY_CLOUD_NAME=cloudinary-name
+CLOUDINARY_API_KEY=cloudinary-key
+CLOUDINARY_API_SECRET=cloudinary-secret
+```
+
+### Production Deployment
+- **Frontend**: Vercel with automatic deployments
+- **Backend**: Railway with PostgreSQL
+- **CDN**: Cloudinary for file storage
+- **Monitoring**: Sentry for error tracking
+
+## Development Workflow
+
+### Phase-based Development
+1. **Phase 1**: Infrastructure setup (auth, database, deployment)
+2. **Phase 2**: Core features (guidelines, upload, AI generation)
+3. **Phase 3**: Advanced features (thumbnails, SEO, anti-detection)
+4. **Phase 4**: Testing, optimization, launch preparation
+
+### Testing Requirements
+- Unit tests for critical functions
+- Integration tests for API endpoints
+- End-to-end tests for user workflows
+- Performance testing for AI generation
+- Security testing for file uploads
+
+## Key Development Principles
+
+### Commercial Readiness
+- Scalable architecture for multiple users
+- Subscription-based user management
+- Usage tracking and limitations
+- Payment integration ready
+- Admin dashboard capabilities
+
+### User Experience
+- Intuitive interface design
+- Real-time progress indicators
+- Mobile-responsive design
+- Accessibility compliance
+- Performance optimization
+
+### Data Management
+- GDPR compliance
+- User data encryption
+- Backup and recovery procedures
+- Analytics and usage tracking
+- Content version control
+
+## Critical Success Factors
+
+1. **AI Detection Evasion**: Implement sophisticated algorithms to avoid AI content detection
+2. **SEO Performance**: Ensure generated content ranks well in Naver search
+3. **User Experience**: Streamlined workflow from content input to published blog post
+4. **Scalability**: Architecture supports growth to thousands of users
+5. **Reliability**: 99.9% uptime with robust error handling
+
+## File References
+- Main specification: [blog_content_service_spec.md](mdc:blog_content_service_spec.md)
+
+---
+
+**Important**: This is a production-ready commercial web service. All development should prioritize security, performance, and user experience. Follow the specifications strictly and implement proper testing before deployment.
