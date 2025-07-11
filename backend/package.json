@@ -1,17 +1,18 @@
 {
   "name": "blogcraft-backend",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "scripts": {
-    "build": "echo 'Skipping TypeScript compilation' && mkdir -p dist && echo 'Build completed'",
-    "build-original": "tsc",
     "start": "npx ts-node src/index.ts",
-    "dev": "nodemon src/index.ts",
+    "dev": "npx nodemon src/index.ts",
+    "build": "echo 'Using ts-node for Railway deployment' && npx prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy": "npm run build && npm start",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
-    "db:migrate": "npx prisma migrate deploy",
+    "db:studio": "npx prisma studio",
+    "db:migrate": "npx prisma migrate dev",
+    "db:deploy": "npx prisma migrate deploy",
+    "db:seed": "npx prisma db seed",
     "postinstall": "npm run db:generate"
   },
   "keywords": [

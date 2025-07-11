@@ -1,52 +1,37 @@
 {
   "compilerOptions": {
-    "target": "es2020",
+    "target": "ES2022",
     "module": "commonjs",
-    "lib": ["es2020"],
-    "allowJs": true,
+    "moduleResolution": "node",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": false,
-    "noImplicitAny": false,
-    "noImplicitThis": false,
-    "noEmitOnError": false,
-    "noImplicitReturns": false,
-    "noImplicitThis": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "exactOptionalPropertyTypes": false,
-    "noImplicitOverride": false,
-    "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": false,
-    "allowUnreachableCode": true,
-    "allowUnusedLabels": true,
-    "moduleResolution": "node",
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["src/*"]
-    },
-    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": false,
-    "resolveJsonModule": true
+    "allowJs": true,
+    "noImplicitAny": false,
+    "noImplicitThis": false,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": true,
+    "incremental": false,
+    "tsBuildInfoFile": null
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist"
-  ],
-  "ts-node": {
-    "transpileOnly": true,
-    "ignore": ["node_modules"],
-    "compilerOptions": {
-      "strict": false,
-      "noImplicitAny": false,
-      "skipLibCheck": true
-    }
-  }
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }
