@@ -127,7 +127,7 @@ export interface JwtPayload {
 
 // Express Request 확장 타입 (any 타입으로 간단히 처리)
 export interface AuthenticatedRequest {
-  user: {
+  user?: {
     userId: string;
     email: string;
     name: string;

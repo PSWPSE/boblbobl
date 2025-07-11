@@ -13,7 +13,7 @@ export interface TokenPayload {
  * JWT 토큰 생성
  */
 export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: 60 * 60 * 24 * 7 }); // 7일 (초 단위)
+  return (jwt.sign as any)(payload, JWT_SECRET, { expiresIn: '7d' });
 }
 
 /**

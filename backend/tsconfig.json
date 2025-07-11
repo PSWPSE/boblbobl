@@ -8,6 +8,18 @@
     "rootDir": "./src",
     "strict": false,
     "noImplicitAny": false,
+    "noImplicitThis": false,
+    "noEmitOnError": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false,
+    "allowUnreachableCode": true,
+    "allowUnusedLabels": true,
     "moduleResolution": "node",
     "baseUrl": "./",
     "paths": {
@@ -18,7 +30,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "forceConsistentCasingInFileNames": false,
     "resolveJsonModule": true
   },
   "include": [
