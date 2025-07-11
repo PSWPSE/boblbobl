@@ -1,4 +1,4 @@
-import pdfParse from 'pdf-parse';
+// import pdfParse from 'pdf-parse'; // 임시 비활성화
 import mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
@@ -20,11 +20,15 @@ export interface ProcessedFileResult {
  * PDF 파일 텍스트 추출
  */
 export async function extractTextFromPDF(buffer: Buffer, originalName?: string): Promise<ProcessedFileResult> {
+  // 임시 비활성화 - PDF 처리 기능은 나중에 활성화
+  throw new Error('PDF 처리 기능은 현재 비활성화되어 있습니다. 텍스트 파일을 사용해주세요.');
+  
+  /*
   try {
     const data = await pdfParse(buffer);
     
     const extractedText = data.text;
-    const wordCount = extractedText.split(/\s+/).filter(word => word.length > 0).length;
+    const wordCount = extractedText.split(/\s+/).filter((word: string) => word.length > 0).length;
     
     return {
       extractedText,
@@ -40,6 +44,7 @@ export async function extractTextFromPDF(buffer: Buffer, originalName?: string):
   } catch (error) {
     throw new Error(`PDF 파일 처리 중 오류가 발생했습니다: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+  */
 }
 
 /**

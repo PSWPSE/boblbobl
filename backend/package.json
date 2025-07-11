@@ -41,7 +41,6 @@
     "express-session": "^1.18.1",
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
-    "korean-js": "^0.8.2",
     "mammoth": "^1.9.1",
     "multer": "^2.0.1",
     "natural": "^8.1.0",
@@ -51,7 +50,6 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-kakao": "^1.0.1",
     "passport-naver-v2": "^2.0.8",
-    "pdf-parse": "^1.1.1",
     "prisma": "^6.11.1",
     "sharp": "^0.34.2",
     "typescript": "^5.8.3"
@@ -60,7 +58,6 @@
     "@types/express-session": "^1.18.2",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
-    "@types/pdf-parse": "^1.1.5",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2"
   }

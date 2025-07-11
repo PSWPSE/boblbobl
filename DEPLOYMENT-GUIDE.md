@@ -58,10 +58,10 @@ Railway 대시보드에서 환경 변수 설정:
 NODE_ENV=production
 DATABASE_URL=postgresql://postgres:TmdGFdaksSgPPbAsDsAnHlTDPpWjkqUu@shortline.proxy.rlwy.net:54002/railway
 JWT_SECRET=bdb892b35ec2e50210a14b87bc5a257d
-OPENAI_API_KEY=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
+OPENAI_API_KEY=your-openai-api-key
 CLIENT_URL=https://your-frontend-domain.vercel.app
-GOOGLE_CLIENT_ID=663459245926-s568h91gdsu8q33nks47l4umad616uu9.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 NAVER_CLIENT_ID=Ill7zizD7cfU7FiVwH74
 NAVER_CLIENT_SECRET=e6MnDF8vxy
 CLOUDINARY_CLOUD_NAME=dfrqgjdtd
