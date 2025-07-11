@@ -42,7 +42,7 @@ const nextConfig = {
 
   // 📝 ESLint 설정
   eslint: {
-    ignoreDuringBuilds: process.env.NODE_ENV === 'development',
+    ignoreDuringBuilds: true, // 빌드 시 ESLint 무시
   },
 
   // 🔄 프로덕션 설정

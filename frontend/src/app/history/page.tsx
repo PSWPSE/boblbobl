@@ -420,7 +420,9 @@ export default function HistoryPage() {
                     <span>{formatDate(content.createdAt)}</span>
                   </div>
                   {content.metadata.sourceUrl && (
-                    <LinkIcon className="w-4 h-4 text-blue-500" title="URL에서 추출됨" />
+                    <div className="inline-flex items-center" title="URL에서 추출됨">
+                      <LinkIcon className="w-4 h-4 text-blue-500" />
+                    </div>
                   )}
                 </div>
 
