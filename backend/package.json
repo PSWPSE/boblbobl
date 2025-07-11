@@ -6,7 +6,12 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "npm run build && npm start",
+    "db:generate": "npx prisma generate",
+    "db:push": "npx prisma db push",
+    "db:migrate": "npx prisma migrate deploy",
+    "postinstall": "npm run db:generate"
   },
   "keywords": [
     "blog",
@@ -30,7 +35,6 @@
     "cheerio": "^1.1.0",
     "cloudinary": "^2.7.0",
     "compromise": "^14.14.4",
-    "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
     "dotenv": "^17.1.0",
     "express": "^5.1.0",
@@ -55,6 +59,8 @@
   "devDependencies": {
     "@types/express-session": "^1.18.2",
     "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.16",
+    "@types/pdf-parse": "^1.1.5",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2"
   }

@@ -89,22 +89,21 @@ export async function getKeywordOptions(req: Request, res: Response<ApiResponse<
  */
 export async function getGuidelines(req: Request, res: Response<PaginatedResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
-      res.status(401).json({
+    if (!req.user || !req.user.userId) {
+      (res as any).status(401).json({
         success: false,
-        data: [],
-        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
+        error: '인증이 필요합니다.'
       });
       return;
     }
 
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 10));
     const skip = (page - 1) * limit;
 
     const [guidelines, total] = await Promise.all([
       prisma.contentGuideline.findMany({
-        where: { userId: req.user.userId },
+        where: { userId: req.user.userId! },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -115,11 +114,9 @@ export async function getGuidelines(req: Request, res: Response<PaginatedRespons
         }
       }),
       prisma.contentGuideline.count({
-        where: { userId: req.user.userId }
+        where: { userId: req.user.userId! }
       })
     ]);
-
-    const totalPages = Math.ceil(total / limit);
 
     res.json({
       success: true,
@@ -128,15 +125,14 @@ export async function getGuidelines(req: Request, res: Response<PaginatedRespons
         page,
         limit,
         total,
-        totalPages
+        totalPages: Math.ceil(total / limit)
       }
     });
   } catch (error) {
     console.error('Get guidelines error:', error);
-    res.status(500).json({
+    (res as any).status(500).json({
       success: false,
-      data: [],
-      pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
+      error: '서버 오류가 발생했습니다.'
     });
   }
 }
@@ -194,7 +190,7 @@ export async function getGuidelineById(req: Request, res: Response<ApiResponse<a
  */
 export async function createGuideline(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'
@@ -204,16 +200,16 @@ export async function createGuideline(req: Request, res: Response<ApiResponse<an
 
     const { name, keywords, memo, type }: CreateGuidelineInput = req.body;
 
-    // 입력 검증
-    if (!name || !type) {
+    // 기본 유효성 검사
+    if (!name || name.trim().length === 0) {
       res.status(400).json({
         success: false,
-        error: '이름과 타입은 필수 입력사항입니다.'
+        error: '이름은 필수입니다.'
       });
       return;
     }
 
-    if (type !== 'keywords' && type !== 'memo') {
+    if (!type || (type !== 'keywords' && type !== 'memo')) {
       res.status(400).json({
         success: false,
         error: '타입은 keywords 또는 memo여야 합니다.'
@@ -240,7 +236,7 @@ export async function createGuideline(req: Request, res: Response<ApiResponse<an
     // 중복 이름 확인
     const existingGuideline = await prisma.contentGuideline.findFirst({
       where: {
-        userId: req.user.userId,
+        userId: req.user.userId!,
         name
       }
     });
@@ -256,10 +252,10 @@ export async function createGuideline(req: Request, res: Response<ApiResponse<an
     // 가이드라인 생성
     const guideline = await prisma.contentGuideline.create({
       data: {
-        userId: req.user.userId,
+        userId: req.user.userId!,
         name,
-        keywords: type === 'keywords' ? keywords : null,
-        memo: type === 'memo' ? memo : null,
+        keywords: type === 'keywords' ? keywords as any : undefined,
+        memo: type === 'memo' ? memo : undefined,
         type
       }
     });
@@ -283,7 +279,7 @@ export async function createGuideline(req: Request, res: Response<ApiResponse<an
  */
 export async function updateGuideline(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'
@@ -298,7 +294,7 @@ export async function updateGuideline(req: Request, res: Response<ApiResponse<an
     const existingGuideline = await prisma.contentGuideline.findFirst({
       where: {
         id,
-        userId: req.user.userId
+        userId: req.user.userId!
       }
     });
 
@@ -314,7 +310,7 @@ export async function updateGuideline(req: Request, res: Response<ApiResponse<an
     if (name && name !== existingGuideline.name) {
       const duplicateGuideline = await prisma.contentGuideline.findFirst({
         where: {
-          userId: req.user.userId,
+          userId: req.user.userId!,
           name,
           NOT: { id }
         }
@@ -334,8 +330,8 @@ export async function updateGuideline(req: Request, res: Response<ApiResponse<an
       where: { id },
       data: {
         name: name || existingGuideline.name,
-        keywords: type === 'keywords' ? keywords : null,
-        memo: type === 'memo' ? memo : null,
+        keywords: type === 'keywords' ? keywords as any : undefined,
+        memo: type === 'memo' ? memo : undefined,
         type: type || existingGuideline.type
       }
     });
@@ -359,7 +355,7 @@ export async function updateGuideline(req: Request, res: Response<ApiResponse<an
  */
 export async function deleteGuideline(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'
@@ -373,7 +369,7 @@ export async function deleteGuideline(req: Request, res: Response<ApiResponse<an
     const existingGuideline = await prisma.contentGuideline.findFirst({
       where: {
         id,
-        userId: req.user.userId
+        userId: req.user.userId!
       }
     });
 

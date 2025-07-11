@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,21 +8,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  User, 
-  Mail, 
-  Lock, 
-  Settings, 
-  Shield, 
-  Link2, 
-  Unlink,
-  CheckCircle,
-  XCircle,
   AlertCircle,
+  CheckCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Link2,
+  Shield,
+  Unlink,
+  User
 } from 'lucide-react';
+import { apiDelete, apiGet, apiPut } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/notifications';
 
 interface SocialAccount {
   id: string;
@@ -44,14 +41,12 @@ interface SocialAccountStatus {
 }
 
 export default function SettingsPage() {
-  const { user, token, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const router = useRouter();
   
   const [activeTab, setActiveTab] = useState<'profile' | 'social' | 'security'>('profile');
   const [socialStatus, setSocialStatus] = useState<SocialAccountStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   
   const [profileData, setProfileData] = useState({
     name: '',
@@ -86,18 +81,12 @@ export default function SettingsPage() {
 
   const fetchSocialStatus = async () => {
     try {
-      const response = await fetch('/api/social/status', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      
+      const data = await apiGet('/api/social/status');
       if (data.success) {
         setSocialStatus(data.data);
       }
     } catch (error) {
-      console.error('소셜 계정 상태 로드 실패:', error);
+      showError('소셜 계정 상태를 불러오는데 실패했습니다.');
     }
   };
 
@@ -109,26 +98,18 @@ export default function SettingsPage() {
     if (!confirm(`${provider.toUpperCase()} 계정 연결을 해제하시겠습니까?`)) return;
 
     setIsLoading(true);
-    setError('');
     
     try {
-      const response = await fetch(`/api/social/unlink/${provider}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await apiDelete(`/api/social/unlink/${provider}`);
       
       if (data.success) {
-        setMessage(data.message);
+        showSuccess(data.message);
         fetchSocialStatus();
       } else {
-        setError(data.error);
+        showError(data.error);
       }
     } catch (error) {
-      setError('소셜 계정 연결 해제 중 오류가 발생했습니다.');
+      showError('소셜 계정 연결 해제 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -137,29 +118,18 @@ export default function SettingsPage() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    setMessage('');
 
     try {
-      const response = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(profileData)
-      });
-
-      const data = await response.json();
+      const data = await apiPut('/api/auth/profile', profileData);
       
       if (data.success) {
-        setMessage('프로필이 성공적으로 업데이트되었습니다.');
+        showSuccess('프로필이 성공적으로 업데이트되었습니다.');
         // 로컬 상태 업데이트 필요 시 여기서 처리
       } else {
-        setError(data.error);
+        showError(data.error);
       }
     } catch (error) {
-      setError('프로필 업데이트 중 오류가 발생했습니다.');
+      showError('프로필 업데이트 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -169,41 +139,30 @@ export default function SettingsPage() {
     e.preventDefault();
     
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('새 비밀번호가 일치하지 않습니다.');
+      showError('새 비밀번호가 일치하지 않습니다.');
       return;
     }
     
     setIsLoading(true);
-    setError('');
-    setMessage('');
 
     try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword
-        })
+      const data = await apiPut('/api/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
       });
-
-      const data = await response.json();
       
       if (data.success) {
-        setMessage('비밀번호가 성공적으로 변경되었습니다.');
+        showSuccess('비밀번호가 성공적으로 변경되었습니다.');
         setPasswordData({
           currentPassword: '',
           newPassword: '',
           confirmPassword: ''
         });
       } else {
-        setError(data.error);
+        showError(data.error);
       }
     } catch (error) {
-      setError('비밀번호 변경 중 오류가 발생했습니다.');
+      showError('비밀번호 변경 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -239,21 +198,6 @@ export default function SettingsPage() {
             프로필 정보와 보안 설정을 관리하세요
           </p>
         </div>
-
-        {/* 메시지 표시 */}
-        {message && (
-          <Alert className="mb-6 border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">{message}</AlertDescription>
-          </Alert>
-        )}
-
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <div className="flex gap-4 mb-6">
           <Button
@@ -480,12 +424,12 @@ export default function SettingsPage() {
                 )}
 
                 {socialStatus && !socialStatus.canUnlink && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
+                  <div className="flex items-center p-4 border rounded-lg bg-yellow-50 text-yellow-800">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <p className="text-sm">
                       마지막 로그인 방법입니다. 비밀번호를 설정하거나 다른 소셜 계정을 연결한 후 해제할 수 있습니다.
-                    </AlertDescription>
-                  </Alert>
+                    </p>
+                  </div>
                 )}
               </div>
             </CardContent>

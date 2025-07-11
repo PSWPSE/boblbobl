@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,22 +11,20 @@ import { useAuthStore } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
-  Search, 
-  Target, 
-  BookOpen, 
-  Tag, 
-  TrendingUp, 
   AlertTriangle, 
+  BarChart3,
   CheckCircle,
   Copy,
-  Download,
-  BarChart3,
-  Globe,
   Eye,
+  Globe,
+  Lightbulb,
+  Search,
+  Target,
   Trash2,
-  Plus,
-  Lightbulb
+  TrendingUp
 } from 'lucide-react';
+import { apiDelete, apiGet, apiPost } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/notifications';
 
 interface KeywordAnalysis {
   keyword: string;
@@ -90,7 +88,7 @@ interface SEOAnalysisData {
 }
 
 export default function SEOPage() {
-  const { user, token } = useAuthStore();
+  const { user } = useAuthStore();
   const router = useRouter();
   
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -125,24 +123,18 @@ export default function SEOPage() {
 
   const fetchUserAnalyses = async () => {
     try {
-      const response = await fetch('/api/seo/my-analyses', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      
+      const data = await apiGet('/api/seo/my-analyses');
       if (data.success) {
         setUserAnalyses(data.data.analyses);
       }
     } catch (error) {
-      console.error('SEO 분석 기록 로드 실패:', error);
+      showError('SEO 분석 기록을 불러오는데 실패했습니다.');
     }
   };
 
   const handleSEOAnalysis = async () => {
     if (!formData.title || !formData.content) {
-      alert('제목과 내용을 입력해주세요.');
+      showError('제목과 내용을 입력해주세요.');
       return;
     }
 
@@ -153,32 +145,23 @@ export default function SEOPage() {
         .map(keyword => keyword.trim())
         .filter(keyword => keyword);
 
-      const response = await fetch('/api/seo/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          content: formData.content,
-          metaDescription: formData.metaDescription,
-          targetKeywords: keywordsArray
-        })
+      const data = await apiPost('/api/seo/analyze', {
+        title: formData.title,
+        content: formData.content,
+        metaDescription: formData.metaDescription,
+        targetKeywords: keywordsArray
       });
-
-      const data = await response.json();
       
       if (data.success) {
         setAnalysisResult(data.data);
         fetchUserAnalyses();
         setActiveTab('analyze');
+        showSuccess('SEO 분석이 완료되었습니다.');
       } else {
-        alert(`SEO 분석 실패: ${data.error}`);
+        showError(`SEO 분석 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('SEO 분석 오류:', error);
-      alert('SEO 분석 중 오류가 발생했습니다.');
+      showError('SEO 분석 중 오류가 발생했습니다.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -186,7 +169,7 @@ export default function SEOPage() {
 
   const handleNaverOptimization = async () => {
     if (!formData.title || !formData.content) {
-      alert('제목과 내용을 입력해주세요.');
+      showError('제목과 내용을 입력해주세요.');
       return;
     }
 
@@ -197,20 +180,11 @@ export default function SEOPage() {
         .map(tag => tag.trim())
         .filter(tag => tag);
 
-      const response = await fetch('/api/seo/naver-optimization', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          content: formData.content,
-          tags: tagsArray
-        })
+      const data = await apiPost('/api/seo/naver-optimization', {
+        title: formData.title,
+        content: formData.content,
+        tags: tagsArray
       });
-
-      const data = await response.json();
       
       if (data.success) {
         setAnalysisResult(prevResult => ({
@@ -218,12 +192,12 @@ export default function SEOPage() {
           naverOptimization: data.data
         }));
         setActiveTab('naver');
+        showSuccess('네이버 최적화 분석이 완료되었습니다.');
       } else {
-        alert(`네이버 최적화 분석 실패: ${data.error}`);
+        showError(`네이버 최적화 분석 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('네이버 최적화 오류:', error);
-      alert('네이버 최적화 분석 중 오류가 발생했습니다.');
+      showError('네이버 최적화 분석 중 오류가 발생했습니다.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -233,53 +207,39 @@ export default function SEOPage() {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      const response = await fetch(`/api/seo/${analysisId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await apiDelete(`/api/seo/${analysisId}`);
       
       if (data.success) {
         fetchUserAnalyses();
         if (selectedAnalysis?.id === analysisId) {
           setSelectedAnalysis(null);
         }
+        showSuccess('분석이 삭제되었습니다.');
       } else {
-        alert(`삭제 실패: ${data.error}`);
+        showError(`삭제 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('삭제 오류:', error);
-      alert('삭제 중 오류가 발생했습니다.');
+      showError('삭제 중 오류가 발생했습니다.');
     }
   };
 
   const handleViewAnalysis = async (analysisId: string) => {
     try {
-      const response = await fetch(`/api/seo/${analysisId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await apiGet(`/api/seo/${analysisId}`);
       
       if (data.success) {
         setSelectedAnalysis(data.data);
       } else {
-        alert(`분석 조회 실패: ${data.error}`);
+        showError(`분석 조회 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('분석 조회 오류:', error);
-      alert('분석 조회 중 오류가 발생했습니다.');
+      showError('분석 조회 중 오류가 발생했습니다.');
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('클립보드에 복사되었습니다.');
+    showSuccess('클립보드에 복사되었습니다.');
   };
 
   const getScoreColor = (score: number) => {

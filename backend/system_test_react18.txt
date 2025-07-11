@@ -1,0 +1,14 @@
+# React 18 성능 최적화 가이드
+
+React 18에서는 새로운 Concurrent Features가 도입되어 성능 향상을 위한 다양한 기능들이 추가되었습니다.
+
+## 주요 기능들
+
+1. Automatic Batching: 여러 state 업데이트를 하나로 배칭
+2. Suspense 개선: 데이터 로딩과 컴포넌트 렌더링 분리
+3. useDeferredValue: 긴급하지 않은 업데이트 지연
+4. useTransition: 논 블로킹 업데이트 처리
+
+## 실제 적용 예제
+
+이러한 기능들을 실제 프로젝트에 어떻게 적용할 수 있는지 살펴보겠습니다.

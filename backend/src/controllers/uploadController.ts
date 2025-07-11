@@ -5,11 +5,11 @@ import { processFile, extractTextFromURL, validateExtractedText } from '../utils
 import { uploadFileToCloudinary, deleteFileFromCloudinary } from '../utils/cloudinary';
 
 /**
- * 파일 업로드 및 처리
+ * 파일 업로드 및 텍스트 추출
  */
 export async function uploadFile(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'
@@ -21,38 +21,38 @@ export async function uploadFile(req: Request, res: Response<ApiResponse<any>>):
     if (!file) {
       res.status(400).json({
         success: false,
-        error: '파일이 제공되지 않았습니다.'
+        error: '파일이 업로드되지 않았습니다.'
       });
       return;
     }
 
-    // 파일 크기 제한 (10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
+    // 파일 크기 제한 검사 (50MB)
+    if (file.size > 50 * 1024 * 1024) {
       res.status(400).json({
         success: false,
-        error: '파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.'
+        error: '파일 크기는 50MB를 초과할 수 없습니다.'
       });
       return;
     }
 
-    // 허용된 파일 타입 검증
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword',
-      'text/plain'
-    ];
-
-    if (!allowedTypes.includes(file.mimetype)) {
+    // 지원되는 파일 형식 검사
+    const supportedTypes = ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!supportedTypes.includes(file.mimetype)) {
       res.status(400).json({
         success: false,
-        error: '지원하지 않는 파일 형식입니다. PDF, DOC, DOCX, TXT 파일만 업로드 가능합니다.'
+        error: '지원되지 않는 파일 형식입니다. PDF, TXT, DOC, DOCX 파일만 업로드 가능합니다.'
       });
       return;
     }
 
-    // 파일 텍스트 추출
+    // Cloudinary에 파일 업로드
+    const cloudinaryResult = await uploadFileToCloudinary(file.buffer, {
+      folder: 'blogcraft-uploads',
+      resource_type: 'auto',
+      public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, '')}`
+    });
+
+    // 파일에서 텍스트 추출
     const processResult = await processFile(file.buffer, file.mimetype, file.originalname);
     
     // 텍스트 품질 검증
@@ -61,21 +61,6 @@ export async function uploadFile(req: Request, res: Response<ApiResponse<any>>):
       res.status(400).json({
         success: false,
         error: `파일 처리 중 문제가 발견되었습니다: ${validation.issues.join(', ')}`
-      });
-      return;
-    }
-
-    // Cloudinary에 파일 업로드
-    let cloudinaryResult;
-    try {
-      cloudinaryResult = await uploadFileToCloudinary(file.buffer, {
-        folder: 'blogcraft/source-files',
-        resource_type: 'auto'
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: '파일 저장 중 오류가 발생했습니다.'
       });
       return;
     }
@@ -118,7 +103,7 @@ export async function uploadFile(req: Request, res: Response<ApiResponse<any>>):
  */
 export async function processURL(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'
@@ -183,7 +168,7 @@ export async function processURL(req: Request, res: Response<ApiResponse<any>>):
  */
 export async function getSourceData(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'

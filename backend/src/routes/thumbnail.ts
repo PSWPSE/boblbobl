@@ -8,7 +8,7 @@ import {
   deleteThumbnail,
   getThumbnailOptions
 } from '../controllers/thumbnailController';
-import { authenticate } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { body, param, query } from 'express-validator';
 import { validate } from '../middleware/validate';
 
@@ -19,7 +19,7 @@ router.get('/options', getThumbnailOptions);
 
 // 기본 썸네일 생성
 router.post('/generate', 
-  authenticate,
+  authenticateToken,
   [
     body('title').notEmpty().withMessage('제목은 필수입니다'),
     body('content').notEmpty().withMessage('내용은 필수입니다'),
@@ -29,12 +29,12 @@ router.post('/generate',
     body('language').optional().isIn(['ko', 'en']).withMessage('유효하지 않은 언어입니다')
   ],
   validate,
-  generateBasicThumbnail
+  generateBasicThumbnail as any
 );
 
 // 텍스트 오버레이 썸네일 생성
 router.post('/generate/with-text',
-  authenticate,
+  authenticateToken,
   [
     body('title').notEmpty().withMessage('제목은 필수입니다'),
     body('content').notEmpty().withMessage('내용은 필수입니다'),
@@ -48,12 +48,12 @@ router.post('/generate/with-text',
     body('language').optional().isIn(['ko', 'en']).withMessage('유효하지 않은 언어입니다')
   ],
   validate,
-  generateThumbnailWithOverlay
+  generateThumbnailWithOverlay as any
 );
 
 // 템플릿 기반 썸네일 생성
 router.post('/generate/templated',
-  authenticate,
+  authenticateToken,
   [
     body('title').notEmpty().withMessage('제목은 필수입니다'),
     body('content').notEmpty().withMessage('내용은 필수입니다'),
@@ -64,38 +64,38 @@ router.post('/generate/templated',
     body('language').optional().isIn(['ko', 'en']).withMessage('유효하지 않은 언어입니다')
   ],
   validate,
-  generateTemplatedThumbnail
+  generateTemplatedThumbnail as any
 );
 
 // 사용자 썸네일 목록 조회
 router.get('/my-thumbnails',
-  authenticate,
+  authenticateToken,
   [
     query('page').optional().isInt({ min: 1 }).withMessage('페이지는 1 이상의 정수여야 합니다'),
     query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('한 페이지 당 항목 수는 1-50 사이여야 합니다')
   ],
   validate,
-  getUserThumbnails
+  getUserThumbnails as any
 );
 
 // 특정 썸네일 조회
 router.get('/:id',
-  authenticate,
+  authenticateToken,
   [
     param('id').isUUID().withMessage('유효하지 않은 썸네일 ID입니다')
   ],
   validate,
-  getThumbnail
+  getThumbnail as any
 );
 
 // 썸네일 삭제
 router.delete('/:id',
-  authenticate,
+  authenticateToken,
   [
     param('id').isUUID().withMessage('유효하지 않은 썸네일 ID입니다')
   ],
   validate,
-  deleteThumbnail
+  deleteThumbnail as any
 );
 
 export default router; 

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
@@ -13,7 +13,8 @@ export async function handleSocialLoginCallback(req: Request, res: Response) {
     const user = req.user as any;
     
     if (!user) {
-      return res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=소셜 로그인 실패`);
+      res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=소셜 로그인 실패`);
+      return;
     }
 
     // JWT 토큰 생성
@@ -48,16 +49,250 @@ export async function handleSocialLoginFailure(req: Request, res: Response) {
 }
 
 /**
- * 사용자의 소셜 계정 목록 조회
+ * 사용자 소셜 계정 목록 조회
  */
-export async function getUserSocialAccounts(req: AuthenticatedRequest, res: Response) {
+export async function getUserSocialAccounts(req: Request, res: Response): Promise<void> {
   try {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({ error: '로그인이 필요합니다.' });
+    if (!isAuthenticated(req)) {
+      res.status(401).json({ error: '로그인이 필요합니다.' });
+      return;
     }
 
+    const userId = req.user.userId;
+
+    const socialAccounts = await prisma.socialAccount.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        provider: true,
+        providerId: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: socialAccounts
+    });
+
+  } catch (error) {
+    console.error('소셜 계정 조회 오류:', error);
+    res.status(500).json({ 
+      error: '소셜 계정 조회 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * 소셜 계정 연동 해제
+ */
+export async function unlinkSocialAccount(req: Request, res: Response): Promise<void> {
+  try {
+    if (!isAuthenticated(req)) {
+      res.status(401).json({ error: '로그인이 필요합니다.' });
+      return;
+    }
+
+    const userId = req.user.userId;
+    const { provider } = req.params;
+
+    const socialAccount = await prisma.socialAccount.findFirst({
+      where: { 
+        userId,
+        provider: provider.toUpperCase()
+      }
+    });
+
+    if (!socialAccount) {
+      res.status(404).json({ error: '해당 소셜 계정을 찾을 수 없습니다.' });
+      return;
+    }
+
+    await prisma.socialAccount.delete({
+      where: { id: socialAccount.id }
+    });
+
+    res.json({
+      success: true,
+      message: `${provider} 계정 연동이 해제되었습니다.`
+    });
+
+  } catch (error) {
+    console.error('소셜 계정 연동 해제 오류:', error);
+    res.status(500).json({ 
+      error: '소셜 계정 연동 해제 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * 소셜 계정 연동 상태 조회
+ */
+export async function getSocialAccountStatus(req: Request, res: Response): Promise<void> {
+  try {
+    if (!isAuthenticated(req)) {
+      res.status(401).json({ error: '로그인이 필요합니다.' });
+      return;
+    }
+
+    const userId = req.user.userId;
+    const { provider } = req.params;
+
+    const socialAccount = await prisma.socialAccount.findFirst({
+      where: { 
+        userId,
+        provider: provider.toUpperCase()
+      }
+    });
+
+    const status = {
+      isLinked: !!socialAccount,
+      lastUsedAt: socialAccount?.updatedAt || null,
+      displayName: socialAccount?.name || null,
+      email: socialAccount?.email || null
+    };
+
+    res.json({
+      success: true,
+      data: status
+    });
+
+  } catch (error) {
+    console.error('소셜 계정 상태 조회 오류:', error);
+    res.status(500).json({ 
+      error: '소셜 계정 상태 조회 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * 소셜 계정 연동 통계 조회
+ */
+export async function getSocialAccountStats(req: Request, res: Response): Promise<void> {
+  try {
+    if (!isAuthenticated(req)) {
+      res.status(401).json({ error: '로그인이 필요합니다.' });
+      return;
+    }
+
+    const userId = req.user.userId;
+
+    const stats = await prisma.socialAccount.groupBy({
+      by: ['provider'],
+      where: { userId },
+      _count: { id: true }
+    });
+
+    const totalAccounts = await prisma.socialAccount.count({
+      where: { userId }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalAccounts,
+        providers: stats.map(stat => ({
+          provider: stat.provider,
+          count: stat._count.id
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('소셜 계정 통계 조회 오류:', error);
+    res.status(500).json({ 
+      error: '소셜 계정 통계 조회 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * 소셜 계정 정보 업데이트
+ */
+export async function updateSocialAccountInfo(req: Request, res: Response): Promise<void> {
+  try {
+    if (!isAuthenticated(req)) {
+      res.status(401).json({ error: '로그인이 필요합니다.' });
+      return;
+    }
+
+    const userId = req.user.userId;
+    const { provider } = req.params;
+    const { name, email } = req.body;
+
+    const socialAccount = await prisma.socialAccount.findFirst({
+      where: { 
+        userId,
+        provider: provider.toUpperCase()
+      }
+    });
+
+    if (!socialAccount) {
+      res.status(404).json({ error: '해당 소셜 계정을 찾을 수 없습니다.' });
+      return;
+    }
+
+    const updatedAccount = await prisma.socialAccount.update({
+      where: { id: socialAccount.id },
+      data: {
+        name: name || socialAccount.name,
+        email: email || socialAccount.email,
+        updatedAt: new Date()
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: updatedAccount.id,
+        provider: updatedAccount.provider,
+        name: updatedAccount.name,
+        email: updatedAccount.email,
+        updatedAt: updatedAccount.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('소셜 계정 정보 업데이트 오류:', error);
+    res.status(500).json({ 
+      error: '소셜 계정 정보 업데이트 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+} 
+
+/**
+ * 전체 소셜 계정 상태 조회 (설정 페이지용)
+ */
+export async function getAllSocialAccountStatus(req: Request, res: Response): Promise<void> {
+  try {
+    if (!isAuthenticated(req)) {
+      res.status(401).json({ 
+        success: false, 
+        error: '로그인이 필요합니다.' 
+      });
+      return;
+    }
+
+    const userId = req.user.userId;
+
+    // 사용자 정보 조회 (비밀번호 있는지 확인)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { 
+        password: true,
+        provider: true
+      }
+    });
+
+    // 연결된 소셜 계정 조회
     const socialAccounts = await prisma.socialAccount.findMany({
       where: { userId },
       select: {
@@ -69,237 +304,40 @@ export async function getUserSocialAccounts(req: AuthenticatedRequest, res: Resp
       }
     });
 
-    res.json({
-      success: true,
-      data: socialAccounts
-    });
-
-  } catch (error) {
-    console.error('🚨 소셜 계정 조회 오류:', error);
-    res.status(500).json({ 
-      error: '소셜 계정 조회 중 오류가 발생했습니다.',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
-
-/**
- * 소셜 계정 연결 해제
- */
-export async function unlinkSocialAccount(req: AuthenticatedRequest, res: Response) {
-  try {
-    const { provider } = req.params;
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({ error: '로그인이 필요합니다.' });
-    }
-
-    // 지원하는 프로바이더 확인
-    const supportedProviders = ['google', 'naver', 'kakao'];
-    if (!supportedProviders.includes(provider)) {
-      return res.status(400).json({ error: '지원하지 않는 소셜 프로바이더입니다.' });
-    }
-
-    // 소셜 계정 확인
-    const socialAccount = await prisma.socialAccount.findFirst({
-      where: {
-        userId,
-        provider
-      }
-    });
-
-    if (!socialAccount) {
-      return res.status(404).json({ error: '연결된 소셜 계정을 찾을 수 없습니다.' });
-    }
-
-    // 사용자의 다른 로그인 방법 확인
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        socialAccounts: true
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
-    }
-
-    // 마지막 로그인 방법인지 확인 (비밀번호가 없고 소셜 계정이 하나뿐인 경우)
-    const hasPassword = user.password && user.password.length > 0;
-    const socialAccountCount = user.socialAccounts.length;
-
-    if (!hasPassword && socialAccountCount === 1) {
-      return res.status(400).json({ 
-        error: '마지막 로그인 방법입니다. 비밀번호를 설정하거나 다른 소셜 계정을 연결한 후 해제하세요.' 
-      });
-    }
-
-    // 소셜 계정 연결 해제
-    await prisma.socialAccount.delete({
-      where: { id: socialAccount.id }
-    });
-
-    console.log(`🔗 소셜 계정 연결 해제: ${provider} - ${user.email}`);
-    
-    res.json({
-      success: true,
-      message: `${provider.toUpperCase()} 계정 연결이 해제되었습니다.`
-    });
-
-  } catch (error) {
-    console.error('🚨 소셜 계정 연결 해제 오류:', error);
-    res.status(500).json({ 
-      error: '소셜 계정 연결 해제 중 오류가 발생했습니다.',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
-
-/**
- * 소셜 계정 연결 상태 확인
- */
-export async function getSocialAccountStatus(req: AuthenticatedRequest, res: Response) {
-  try {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({ error: '로그인이 필요합니다.' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        socialAccounts: {
-          select: {
-            provider: true,
-            email: true,
-            name: true,
-            createdAt: true
-          }
-        }
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
-    }
-
-    const hasPassword = user.password && user.password.length > 0;
-    const connectedProviders = user.socialAccounts.map(acc => acc.provider);
-    
+    // 제공자별 상태 맵핑
     const providerStatus = {
-      google: connectedProviders.includes('google'),
-      naver: connectedProviders.includes('naver'),
-      kakao: connectedProviders.includes('kakao')
+      google: socialAccounts.some(account => account.provider.toLowerCase() === 'google'),
+      naver: socialAccounts.some(account => account.provider.toLowerCase() === 'naver'),
+      kakao: socialAccounts.some(account => account.provider.toLowerCase() === 'kakao')
+    };
+
+    // 계정 연결 해제 가능 여부 확인
+    // 비밀번호가 있거나 2개 이상의 소셜 계정이 연결되어 있으면 해제 가능
+    const canUnlink = !!user?.password || socialAccounts.length > 1;
+
+    const response = {
+      hasPassword: !!user?.password,
+      providerStatus,
+      connectedAccounts: socialAccounts.map(account => ({
+        id: account.id,
+        provider: account.provider.toLowerCase(),
+        email: account.email || '',
+        name: account.name || '',
+        createdAt: account.createdAt.toISOString()
+      })),
+      canUnlink
     };
 
     res.json({
       success: true,
-      data: {
-        hasPassword,
-        providerStatus,
-        connectedAccounts: user.socialAccounts,
-        canUnlink: hasPassword || user.socialAccounts.length > 1
-      }
+      data: response
     });
 
   } catch (error) {
-    console.error('🚨 소셜 계정 상태 확인 오류:', error);
+    console.error('전체 소셜 계정 상태 조회 오류:', error);
     res.status(500).json({ 
-      error: '소셜 계정 상태 확인 중 오류가 발생했습니다.',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
-
-/**
- * 소셜 계정 통계 조회
- */
-export async function getSocialAccountStats(req: AuthenticatedRequest, res: Response) {
-  try {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({ error: '로그인이 필요합니다.' });
-    }
-
-    // 전체 소셜 계정 통계 (관리자용)
-    const totalStats = await prisma.socialAccount.groupBy({
-      by: ['provider'],
-      _count: {
-        id: true
-      }
-    });
-
-    // 사용자별 소셜 계정 정보
-    const userSocialAccounts = await prisma.socialAccount.findMany({
-      where: { userId },
-      select: {
-        provider: true,
-        createdAt: true
-      }
-    });
-
-    res.json({
-      success: true,
-      data: {
-        userAccounts: userSocialAccounts,
-        totalStats: totalStats.map(stat => ({
-          provider: stat.provider,
-          count: stat._count.id
-        }))
-      }
-    });
-
-  } catch (error) {
-    console.error('🚨 소셜 계정 통계 조회 오류:', error);
-    res.status(500).json({ 
-      error: '소셜 계정 통계 조회 중 오류가 발생했습니다.',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
-
-/**
- * 소셜 계정 정보 업데이트
- */
-export async function updateSocialAccountInfo(req: AuthenticatedRequest, res: Response) {
-  try {
-    const { provider } = req.params;
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({ error: '로그인이 필요합니다.' });
-    }
-
-    const socialAccount = await prisma.socialAccount.findFirst({
-      where: {
-        userId,
-        provider
-      }
-    });
-
-    if (!socialAccount) {
-      return res.status(404).json({ error: '연결된 소셜 계정을 찾을 수 없습니다.' });
-    }
-
-    // 소셜 계정 정보 업데이트 (필요시 구현)
-    // 현재는 기본 정보만 반환
-    res.json({
-      success: true,
-      data: {
-        provider: socialAccount.provider,
-        email: socialAccount.email,
-        name: socialAccount.name,
-        lastUpdated: socialAccount.updatedAt
-      }
-    });
-
-  } catch (error) {
-    console.error('🚨 소셜 계정 정보 업데이트 오류:', error);
-    res.status(500).json({ 
-      error: '소셜 계정 정보 업데이트 중 오류가 발생했습니다.',
+      success: false,
+      error: '소셜 계정 상태 조회 중 오류가 발생했습니다.',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

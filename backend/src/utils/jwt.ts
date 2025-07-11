@@ -1,8 +1,7 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { JwtPayload } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export interface TokenPayload {
   userId: string;
@@ -14,11 +13,7 @@ export interface TokenPayload {
  * JWT 토큰 생성
  */
 export function generateToken(payload: TokenPayload): string {
-  const options: SignOptions = {
-    expiresIn: JWT_EXPIRES_IN,
-  };
-  
-  return jwt.sign(payload, JWT_SECRET, options);
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
 
 /**
@@ -29,6 +24,7 @@ export function verifyToken(token: string): JwtPayload {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     return decoded;
   } catch (error) {
+    console.error('토큰 검증 에러:', error);
     throw new Error('Invalid token');
   }
 }
@@ -63,7 +59,7 @@ export function isTokenExpired(token: string): boolean {
   try {
     const decoded = verifyToken(token);
     const currentTime = Math.floor(Date.now() / 1000);
-    return decoded.exp < currentTime;
+    return decoded.exp ? decoded.exp < currentTime : true;
   } catch (error) {
     return true;
   }

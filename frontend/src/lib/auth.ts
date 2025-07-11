@@ -1,3 +1,132 @@
+import { create } from 'zustand';
+
+// 사용자 타입 정의
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  provider: string;
+  subscription: string;
+}
+
+// Auth Store 타입 정의
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  isInitialized: boolean;
+  login: (token: string, user: User) => void;
+  logout: () => void;
+  setLoading: (loading: boolean) => void;
+  checkAuth: () => void;
+  initialize: () => void;
+}
+
+// Zustand Auth Store
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  token: null,
+  isLoading: false,
+  isAuthenticated: false,
+  isInitialized: false,
+
+  login: (token: string, user: User) => {
+    tokenStorage.set(token);
+    userStorage.set(user);
+    set({
+      token,
+      user,
+      isAuthenticated: true,
+      isLoading: false,
+      isInitialized: true
+    });
+  },
+
+  logout: () => {
+    tokenStorage.remove();
+    userStorage.remove();
+    set({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isInitialized: true
+    });
+  },
+
+  setLoading: (loading: boolean) => {
+    set({ isLoading: loading });
+  },
+
+  checkAuth: () => {
+    if (typeof window === 'undefined') {
+      set({ isInitialized: true, isLoading: false });
+      return;
+    }
+    
+    try {
+      const token = tokenStorage.get();
+      const user = userStorage.get();
+      
+      if (token && user && isTokenValid(token)) {
+        set({
+          token,
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          isInitialized: true
+        });
+      } else {
+        // 토큰이 없거나 유효하지 않은 경우
+        tokenStorage.remove();
+        userStorage.remove();
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+          isInitialized: true
+        });
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        isInitialized: true
+      });
+    }
+  },
+
+  initialize: () => {
+    if (typeof window !== 'undefined') {
+      try {
+        get().checkAuth();
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        set({ 
+          isInitialized: true, 
+          isLoading: false,
+          isAuthenticated: false,
+          user: null,
+          token: null
+        });
+      }
+    } else {
+      set({ 
+        isInitialized: true, 
+        isLoading: false,
+        isAuthenticated: false,
+        user: null,
+        token: null
+      });
+    }
+  }
+}));
+
 // 로컬 스토리지에서 토큰 관리
 export const tokenStorage = {
   get: (): string | null => {
@@ -44,7 +173,7 @@ export const getAuthHeaders = (): Record<string, string> => {
   };
 };
 
-// 로그아웃 함수
+// 로그아웃 함수 (기존 호환성 유지)
 export const logout = (): void => {
   tokenStorage.remove();
   userStorage.remove();

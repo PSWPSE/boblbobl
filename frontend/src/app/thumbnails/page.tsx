@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
-import { ImageIcon, Download, Eye, Trash2, Plus, Sparkles, Wand2 } from 'lucide-react';
+import { Download, Eye, ImageIcon, Plus, Sparkles, Trash2, Wand2 } from 'lucide-react';
+import { apiDelete, apiGet, apiPost } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/notifications';
 
 interface ThumbnailOption {
   value: string;
@@ -39,7 +41,7 @@ interface ThumbnailData {
 }
 
 export default function ThumbnailPage() {
-  const { user, token } = useAuthStore();
+  const { user } = useAuthStore();
   const router = useRouter();
   
   const [isGenerating, setIsGenerating] = useState(false);
@@ -78,37 +80,29 @@ export default function ThumbnailPage() {
 
   const fetchThumbnailOptions = async () => {
     try {
-      const response = await fetch('/api/thumbnail/options');
-      const data = await response.json();
-      
+      const data = await apiGet('/api/thumbnail/options');
       if (data.success) {
         setThumbnailOptions(data.data);
       }
     } catch (error) {
-      console.error('썸네일 옵션 로드 실패:', error);
+      showError('썸네일 옵션을 불러오는데 실패했습니다.');
     }
   };
 
   const fetchUserThumbnails = async () => {
     try {
-      const response = await fetch('/api/thumbnail/my-thumbnails', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      
+      const data = await apiGet('/api/thumbnail/my-thumbnails');
       if (data.success) {
         setUserThumbnails(data.data.thumbnails);
       }
     } catch (error) {
-      console.error('썸네일 목록 로드 실패:', error);
+      showError('썸네일 목록을 불러오는데 실패했습니다.');
     }
   };
 
   const handleGenerateThumbnail = async () => {
     if (!formData.title || !formData.content) {
-      alert('제목과 내용을 입력해주세요.');
+      showError('제목과 내용을 입력해주세요.');
       return;
     }
 
@@ -117,7 +111,7 @@ export default function ThumbnailPage() {
       const tagsArray = formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
       
       let endpoint = '/api/thumbnail/generate';
-      let requestBody: any = {
+      const requestBody: any = {
         title: formData.title,
         content: formData.content,
         tags: tagsArray,
@@ -134,27 +128,18 @@ export default function ThumbnailPage() {
         requestBody.template = formData.template;
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      const data = await response.json();
+      const data = await apiPost(endpoint, requestBody);
       
       if (data.success) {
         setSelectedThumbnail(data.data);
         fetchUserThumbnails();
         setActiveTab('history');
+        showSuccess('썸네일이 성공적으로 생성되었습니다.');
       } else {
-        alert(`썸네일 생성 실패: ${data.error}`);
+        showError(`썸네일 생성 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('썸네일 생성 오류:', error);
-      alert('썸네일 생성 중 오류가 발생했습니다.');
+      showError('썸네일 생성 중 오류가 발생했습니다.');
     } finally {
       setIsGenerating(false);
     }
@@ -164,26 +149,19 @@ export default function ThumbnailPage() {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      const response = await fetch(`/api/thumbnail/${thumbnailId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await apiDelete(`/api/thumbnail/${thumbnailId}`);
       
       if (data.success) {
         fetchUserThumbnails();
         if (selectedThumbnail?.id === thumbnailId) {
           setSelectedThumbnail(null);
         }
+        showSuccess('썸네일이 삭제되었습니다.');
       } else {
-        alert(`삭제 실패: ${data.error}`);
+        showError(`삭제 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('삭제 오류:', error);
-      alert('삭제 중 오류가 발생했습니다.');
+      showError('삭제 중 오류가 발생했습니다.');
     }
   };
 

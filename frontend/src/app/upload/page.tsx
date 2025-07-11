@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, Link, Trash2, Download, Eye } from 'lucide-react';
+import { Eye, FileText, Link, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
+import { apiDelete, apiGet, apiPost, apiUpload } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/notifications';
 
 interface SourceData {
   id: string;
@@ -44,6 +45,7 @@ export default function UploadPage() {
     if (acceptedFiles.length > 0) {
       uploadFile(acceptedFiles[0]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -59,7 +61,7 @@ export default function UploadPage() {
   });
 
   // 파일 업로드
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     setUploading(true);
     setUploadProgress(0);
 
@@ -67,65 +69,38 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/upload/file`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '파일 업로드에 실패했습니다.');
-      }
-
-      const data = await response.json();
-      toast.success('파일이 성공적으로 업로드되었습니다.');
+      await apiUpload('/api/upload/file', formData);
+      showSuccess('파일이 성공적으로 업로드되었습니다.');
       
       // 업로드 후 목록 새로고침
       fetchSourceData();
       
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '파일 업로드 중 오류가 발생했습니다.');
+      showError(error instanceof Error ? error.message : '파일 업로드 중 오류가 발생했습니다.');
     } finally {
       setUploading(false);
       setUploadProgress(0);
     }
-  };
+  }, []);
 
   // URL 처리
   const processUrl = async () => {
     if (!url.trim()) {
-      toast.error('URL을 입력해주세요.');
+      showError('URL을 입력해주세요.');
       return;
     }
 
     setUrlProcessing(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/upload/url`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'URL 처리에 실패했습니다.');
-      }
-
-      const data = await response.json();
-      toast.success('URL 콘텐츠가 성공적으로 처리되었습니다.');
+      await apiPost('/api/upload/url', { url });
+      showSuccess('URL 콘텐츠가 성공적으로 처리되었습니다.');
       
       setUrl('');
       fetchSourceData();
       
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'URL 처리 중 오류가 발생했습니다.');
+      showError(error instanceof Error ? error.message : 'URL 처리 중 오류가 발생했습니다.');
     } finally {
       setUrlProcessing(false);
     }
@@ -135,20 +110,10 @@ export default function UploadPage() {
   const fetchSourceData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/upload`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('소스 데이터를 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
+      const data = await apiGet('/api/upload');
       setSourceData(data.data.items || []);
     } catch (error) {
-      toast.error('소스 데이터를 불러오는데 실패했습니다.');
+      showError('소스 데이터를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -159,21 +124,11 @@ export default function UploadPage() {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/upload/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('소스 데이터 삭제에 실패했습니다.');
-      }
-
-      toast.success('소스 데이터가 삭제되었습니다.');
+      await apiDelete(`/api/upload/${id}`);
+      showSuccess('소스 데이터가 삭제되었습니다.');
       fetchSourceData();
     } catch (error) {
-      toast.error('소스 데이터 삭제에 실패했습니다.');
+      showError('소스 데이터 삭제에 실패했습니다.');
     }
   };
 

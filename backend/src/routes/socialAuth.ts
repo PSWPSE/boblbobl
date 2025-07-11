@@ -1,74 +1,59 @@
-import express from 'express';
-import passport from '../config/passport';
+import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { body, param } from 'express-validator';
+import { validate } from '../middleware/validate';
 import {
-  handleSocialLoginCallback,
-  handleSocialLoginFailure,
   getUserSocialAccounts,
-  unlinkSocialAccount,
   getSocialAccountStatus,
   getSocialAccountStats,
-  updateSocialAccountInfo
+  unlinkSocialAccount,
+  updateSocialAccountInfo,
+  getAllSocialAccountStatus
 } from '../controllers/socialAuthController';
-import { authenticate } from '../middleware/auth';
-import { param } from 'express-validator';
-import { validate } from '../middleware/validate';
 
-const router = express.Router();
+const router = Router();
 
-// Google OAuth 라우트
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+/**
+ * 전체 소셜 계정 상태 조회 (설정 페이지용)
+ */
+router.get('/status',
+  authenticateToken,
+  getAllSocialAccountStatus
 );
 
-router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: '/api/auth/failure' }),
-  handleSocialLoginCallback
-);
-
-// 네이버 OAuth 라우트
-router.get('/naver',
-  passport.authenticate('naver', { scope: ['profile', 'email'] })
-);
-
-router.get('/naver/callback',
-  passport.authenticate('naver', { failureRedirect: '/api/auth/failure' }),
-  handleSocialLoginCallback
-);
-
-// 카카오 OAuth 라우트
-router.get('/kakao',
-  passport.authenticate('kakao', { scope: ['profile_nickname', 'account_email'] })
-);
-
-router.get('/kakao/callback',
-  passport.authenticate('kakao', { failureRedirect: '/api/auth/failure' }),
-  handleSocialLoginCallback
-);
-
-// 소셜 로그인 실패 처리
-router.get('/failure', handleSocialLoginFailure);
-
-// 사용자 소셜 계정 관리 라우트
+/**
+ * 사용자 소셜 계정 목록 조회
+ */
 router.get('/accounts',
-  authenticate,
+  authenticateToken,
   getUserSocialAccounts
 );
 
-// 소셜 계정 상태 확인
-router.get('/status',
-  authenticate,
+/**
+ * 소셜 계정 연동 상태 조회 (개별 제공자)
+ */
+router.get('/status/:provider',
+  authenticateToken,
+  [
+    param('provider').isIn(['google', 'naver', 'kakao']).withMessage('지원하지 않는 소셜 프로바이더입니다')
+  ],
+  validate,
   getSocialAccountStatus
 );
 
-// 소셜 계정 통계 (관리자용)
+/**
+ * 소셜 계정 연동 통계 조회
+ */
 router.get('/stats',
-  authenticate,
+  authenticateToken,
   getSocialAccountStats
 );
 
-// 소셜 계정 연결 해제
+/**
+ * 소셜 계정 연동 해제
+ */
 router.delete('/unlink/:provider',
-  authenticate,
+  authenticateToken,
   [
     param('provider').isIn(['google', 'naver', 'kakao']).withMessage('지원하지 않는 소셜 프로바이더입니다')
   ],
@@ -76,11 +61,15 @@ router.delete('/unlink/:provider',
   unlinkSocialAccount
 );
 
-// 소셜 계정 정보 업데이트
-router.put('/update/:provider',
-  authenticate,
+/**
+ * 소셜 계정 정보 업데이트
+ */
+router.patch('/update/:provider',
+  authenticateToken,
   [
-    param('provider').isIn(['google', 'naver', 'kakao']).withMessage('지원하지 않는 소셜 프로바이더입니다')
+    param('provider').isIn(['google', 'naver', 'kakao']).withMessage('지원하지 않는 소셜 프로바이더입니다'),
+    body('name').optional().isString().withMessage('이름은 문자열이어야 합니다'),
+    body('email').optional().isEmail().withMessage('유효한 이메일 주소를 입력하세요')
   ],
   validate,
   updateSocialAccountInfo

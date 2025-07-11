@@ -1,5 +1,4 @@
 import { parse } from 'node-html-parser';
-import * as Korean from 'korean-js';
 
 export interface KeywordAnalysis {
   keyword: string;

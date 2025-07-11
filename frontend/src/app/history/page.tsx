@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { History, FileText, Edit2, Trash2, Copy, Download, Search, Filter, Calendar } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Calendar, Copy, Edit2, FileText, Filter, History, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { toast } from 'sonner';
+
+import { apiDelete, apiGet } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/notifications';
 
 interface GeneratedContent {
   id: string;
@@ -46,7 +48,7 @@ export default function HistoryPage() {
   const [contents, setContents] = useState<GeneratedContent[]>([]);
   const [stats, setStats] = useState<ContentStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedContent, setSelectedContent] = useState<GeneratedContent | null>(null);
+
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -65,20 +67,10 @@ export default function HistoryPage() {
         ...(filters.status && { status: filters.status })
       });
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/content?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('콘텐츠 목록을 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
+      const data = await apiGet(`/api/content?${queryParams}`);
       setContents(data.data || []);
     } catch (error) {
-      toast.error('콘텐츠 목록을 불러오는데 실패했습니다.');
+      showError('콘텐츠 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -87,20 +79,10 @@ export default function HistoryPage() {
   // 통계 조회
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/content/stats`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('통계를 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
+      const data = await apiGet('/api/content/stats');
       setStats(data.data);
     } catch (error) {
-      console.error('통계 조회 실패:', error);
+      showError('통계를 불러오는데 실패했습니다.');
     }
   };
 
@@ -109,22 +91,12 @@ export default function HistoryPage() {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/content/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('콘텐츠 삭제에 실패했습니다.');
-      }
-
-      toast.success('콘텐츠가 삭제되었습니다.');
+      await apiDelete(`/api/content/${id}`);
+      showSuccess('콘텐츠가 삭제되었습니다.');
       fetchContents();
       fetchStats();
     } catch (error) {
-      toast.error('콘텐츠 삭제에 실패했습니다.');
+      showError('콘텐츠 삭제에 실패했습니다.');
     }
   };
 
@@ -132,9 +104,9 @@ export default function HistoryPage() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success('클립보드에 복사되었습니다.');
+      showSuccess('클립보드에 복사되었습니다.');
     } catch (error) {
-      toast.error('복사에 실패했습니다.');
+      showError('복사에 실패했습니다.');
     }
   };
 

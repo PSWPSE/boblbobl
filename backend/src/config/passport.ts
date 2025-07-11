@@ -1,286 +1,166 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { Strategy as NaverStrategy } from 'passport-naver-v2';
-import { Strategy as KakaoStrategy } from 'passport-kakao';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+// PrismaClient 인스턴스 생성 (싱글톤 패턴)
+declare global {
+  var __prisma: PrismaClient | undefined;
+}
 
-// Google OAuth 설정
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  callbackURL: "/api/auth/google/callback"
-}, async (accessToken, refreshToken, profile, done) => {
+const prisma = globalThis.__prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.__prisma = prisma;
+}
+
+// 데이터베이스 연결 테스트
+async function testDatabaseConnection() {
   try {
-    console.log('🔍 Google OAuth 프로필:', profile);
-    
-    const email = profile.emails?.[0]?.value;
-    const name = profile.displayName || profile.name?.givenName || 'Google 사용자';
-    const providerId = profile.id;
-    
-    if (!email) {
-      return done(new Error('Google 계정에서 이메일을 가져올 수 없습니다.'));
-    }
-    
-    // 기존 소셜 계정 확인
-    let socialAccount = await prisma.socialAccount.findFirst({
-      where: {
-        provider: 'google',
-        providerId: providerId
-      },
-      include: {
-        user: true
-      }
-    });
-    
-    if (socialAccount) {
-      // 기존 소셜 계정이 있는 경우
-      console.log('✅ 기존 Google 계정 로그인:', socialAccount.user.email);
-      return done(null, socialAccount.user);
-    }
-    
-    // 이메일로 기존 사용자 확인
-    let existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-    
-    if (existingUser) {
-      // 기존 사용자에 소셜 계정 연결
-      await prisma.socialAccount.create({
-        data: {
-          userId: existingUser.id,
-          provider: 'google',
-          providerId: providerId,
-          email: email,
-          name: name,
-          accessToken: accessToken,
-          refreshToken: refreshToken || null
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+  }
+}
+
+// Google OAuth 전략 설정
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  console.log('🔐 Google OAuth strategy initialized');
+  
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: `${process.env.SERVER_URL || 'http://localhost:8000'}/api/auth/google/callback`
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      console.log('🔍 Google OAuth callback received:', profile.displayName);
+      
+      // 기존 소셜 계정 찾기
+      let socialAccount = await prisma.socialAccount.findFirst({
+        where: {
+          provider: 'GOOGLE',
+          providerId: profile.id
+        },
+        include: {
+          user: true
         }
       });
-      
-      console.log('🔗 기존 계정에 Google 연결:', existingUser.email);
-      return done(null, existingUser);
-    }
-    
-    // 새 사용자 생성
-    const newUser = await prisma.user.create({
-      data: {
-        email: email,
-        name: name,
-        password: await bcrypt.hash(Math.random().toString(36), 10), // 임시 비밀번호
-        isVerified: true, // 소셜 로그인은 자동 인증
-        socialAccounts: {
-          create: {
-            provider: 'google',
-            providerId: providerId,
-            email: email,
-            name: name,
-            accessToken: accessToken,
-            refreshToken: refreshToken || null
-          }
-        }
-      }
-    });
-    
-    console.log('🆕 새 Google 사용자 생성:', newUser.email);
-    return done(null, newUser);
-    
-  } catch (error) {
-    console.error('🚨 Google OAuth 오류:', error);
-    return done(error, null);
-  }
-}));
 
-// 네이버 OAuth 설정
-passport.use(new NaverStrategy({
-  clientID: process.env.NAVER_CLIENT_ID!,
-  clientSecret: process.env.NAVER_CLIENT_SECRET!,
-  callbackURL: "/api/auth/naver/callback"
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    console.log('🔍 네이버 OAuth 프로필:', profile);
-    
-    const email = profile.email;
-    const name = profile.name || profile.nickname || '네이버 사용자';
-    const providerId = profile.id;
-    
-    if (!email) {
-      return done(new Error('네이버 계정에서 이메일을 가져올 수 없습니다.'));
-    }
-    
-    // 기존 소셜 계정 확인
-    let socialAccount = await prisma.socialAccount.findFirst({
-      where: {
-        provider: 'naver',
-        providerId: providerId
-      },
-      include: {
-        user: true
-      }
-    });
-    
-    if (socialAccount) {
-      console.log('✅ 기존 네이버 계정 로그인:', socialAccount.user.email);
-      return done(null, socialAccount.user);
-    }
-    
-    // 이메일로 기존 사용자 확인
-    let existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-    
-    if (existingUser) {
-      // 기존 사용자에 소셜 계정 연결
-      await prisma.socialAccount.create({
-        data: {
-          userId: existingUser.id,
-          provider: 'naver',
-          providerId: providerId,
-          email: email,
-          name: name,
-          accessToken: accessToken,
-          refreshToken: refreshToken || null
-        }
-      });
-      
-      console.log('🔗 기존 계정에 네이버 연결:', existingUser.email);
-      return done(null, existingUser);
-    }
-    
-    // 새 사용자 생성
-    const newUser = await prisma.user.create({
-      data: {
-        email: email,
-        name: name,
-        password: await bcrypt.hash(Math.random().toString(36), 10),
-        isVerified: true,
-        socialAccounts: {
-          create: {
-            provider: 'naver',
-            providerId: providerId,
-            email: email,
-            name: name,
-            accessToken: accessToken,
-            refreshToken: refreshToken || null
-          }
-        }
-      }
-    });
-    
-    console.log('🆕 새 네이버 사용자 생성:', newUser.email);
-    return done(null, newUser);
-    
-  } catch (error) {
-    console.error('🚨 네이버 OAuth 오류:', error);
-    return done(error, null);
-  }
-}));
+      let user;
 
-// 카카오 OAuth 설정
-passport.use(new KakaoStrategy({
-  clientID: process.env.KAKAO_CLIENT_ID!,
-  clientSecret: process.env.KAKAO_CLIENT_SECRET!,
-  callbackURL: "/api/auth/kakao/callback"
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    console.log('🔍 카카오 OAuth 프로필:', profile);
-    
-    const email = profile._json.kakao_account?.email;
-    const name = profile._json.kakao_account?.profile?.nickname || profile.displayName || '카카오 사용자';
-    const providerId = profile.id;
-    
-    if (!email) {
-      return done(new Error('카카오 계정에서 이메일을 가져올 수 없습니다.'));
-    }
-    
-    // 기존 소셜 계정 확인
-    let socialAccount = await prisma.socialAccount.findFirst({
-      where: {
-        provider: 'kakao',
-        providerId: providerId
-      },
-      include: {
-        user: true
-      }
-    });
-    
-    if (socialAccount) {
-      console.log('✅ 기존 카카오 계정 로그인:', socialAccount.user.email);
-      return done(null, socialAccount.user);
-    }
-    
-    // 이메일로 기존 사용자 확인
-    let existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-    
-    if (existingUser) {
-      // 기존 사용자에 소셜 계정 연결
-      await prisma.socialAccount.create({
-        data: {
-          userId: existingUser.id,
-          provider: 'kakao',
-          providerId: providerId,
-          email: email,
-          name: name,
-          accessToken: accessToken,
-          refreshToken: refreshToken || null
-        }
-      });
-      
-      console.log('🔗 기존 계정에 카카오 연결:', existingUser.email);
-      return done(null, existingUser);
-    }
-    
-    // 새 사용자 생성
-    const newUser = await prisma.user.create({
-      data: {
-        email: email,
-        name: name,
-        password: await bcrypt.hash(Math.random().toString(36), 10),
-        isVerified: true,
-        socialAccounts: {
-          create: {
-            provider: 'kakao',
-            providerId: providerId,
-            email: email,
-            name: name,
-            accessToken: accessToken,
-            refreshToken: refreshToken || null
+      if (socialAccount) {
+        // 기존 소셜 계정이 있는 경우
+        user = socialAccount.user;
+        console.log('👤 Existing social account found:', user.email);
+        
+        // 소셜 계정 정보 업데이트
+        await prisma.socialAccount.update({
+          where: { id: socialAccount.id },
+          data: {
+            email: profile.emails?.[0]?.value,
+            name: profile.displayName,
+            accessToken,
+            refreshToken,
+            updatedAt: new Date()
           }
+        });
+      } else {
+        // 이메일로 기존 사용자 찾기
+        const userEmail = profile.emails?.[0]?.value;
+        if (userEmail) {
+          user = await prisma.user.findUnique({
+            where: { email: userEmail }
+          });
         }
-      }
-    });
-    
-    console.log('🆕 새 카카오 사용자 생성:', newUser.email);
-    return done(null, newUser);
-    
-  } catch (error) {
-    console.error('🚨 카카오 OAuth 오류:', error);
-    return done(error, null);
-  }
-}));
 
-// 사용자 직렬화
+        if (!user) {
+          // 새 사용자 생성
+          console.log('🆕 Creating new user:', profile.displayName);
+          user = await prisma.user.create({
+            data: {
+              email: profile.emails?.[0]?.value || '',
+              name: profile.displayName || '구글 사용자',
+              provider: 'GOOGLE',
+              subscription: 'free'
+            }
+          });
+        }
+
+        // 소셜 계정 연결
+        await prisma.socialAccount.create({
+          data: {
+            userId: user.id,
+            provider: 'GOOGLE',
+            providerId: profile.id,
+            email: profile.emails?.[0]?.value,
+            name: profile.displayName,
+            accessToken,
+            refreshToken
+          }
+        });
+        
+        console.log('🔗 Social account linked to user:', user.email);
+      }
+
+      // 사용자 정보 반환
+      const userData = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        provider: user.provider,
+        subscription: user.subscription
+      };
+
+      console.log('✅ Google OAuth success:', userData.email);
+      return done(null, userData);
+      
+    } catch (error) {
+      console.error('❌ Google OAuth error:', error);
+      return done(error, false);
+    }
+  }));
+} else {
+  console.log('⚠️ Google OAuth credentials not found');
+}
+
+// 사용자 직렬화 (세션에 저장)
 passport.serializeUser((user: any, done) => {
+  console.log('📦 Serializing user:', user.id);
   done(null, user.id);
 });
 
-// 사용자 역직렬화
+// 사용자 역직렬화 (세션에서 복원)
 passport.deserializeUser(async (id: string, done) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id },
-      include: {
-        socialAccounts: true
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        provider: true,
+        subscription: true,
+        createdAt: true,
+        updatedAt: true
       }
     });
-    done(null, user);
+    
+    if (user) {
+      console.log('📦 Deserializing user:', user.email);
+      done(null, user);
+    } else {
+      console.log('❌ User not found during deserialization:', id);
+      done(new Error('사용자를 찾을 수 없습니다.'), null);
+    }
   } catch (error) {
+    console.error('❌ Deserialization error:', error);
     done(error, null);
   }
 });
 
-export default passport; 
+// 데이터베이스 연결 테스트 실행
+testDatabaseConnection();
+
+export default passport;
+export { prisma }; 

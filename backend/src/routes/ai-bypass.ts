@@ -1,4 +1,7 @@
-import express from 'express';
+import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { body, param, query } from 'express-validator';
+import { validate } from '../middleware/validate';
 import {
   processAIDetectionBypass,
   humanizeText,
@@ -8,15 +11,14 @@ import {
   getAIBypassResult,
   deleteAIBypassResult
 } from '../controllers/aiBypassController';
-import { authenticate } from '../middleware/auth';
-import { body, param, query } from 'express-validator';
-import { validate } from '../middleware/validate';
 
-const router = express.Router();
+const router = Router();
 
-// AI 탐지 우회 처리
-router.post('/process',
-  authenticate,
+/**
+ * AI 탐지 우회 처리
+ */
+router.post('/process', 
+  authenticateToken,
   [
     body('text').notEmpty().withMessage('처리할 텍스트는 필수입니다'),
     body('humanizationLevel').optional().isIn(['low', 'medium', 'high']).withMessage('인간화 레벨이 올바르지 않습니다'),
@@ -31,9 +33,11 @@ router.post('/process',
   processAIDetectionBypass
 );
 
-// 텍스트 자연화
+/**
+ * 텍스트 자연화 처리
+ */
 router.post('/humanize',
-  authenticate,
+  authenticateToken,
   [
     body('text').notEmpty().withMessage('자연화할 텍스트는 필수입니다'),
     body('level').optional().isIn(['low', 'medium', 'high']).withMessage('자연화 레벨이 올바르지 않습니다')
@@ -42,9 +46,11 @@ router.post('/humanize',
   humanizeText
 );
 
-// 문체 변환
+/**
+ * 문체 변환
+ */
 router.post('/convert-style',
-  authenticate,
+  authenticateToken,
   [
     body('text').notEmpty().withMessage('변환할 텍스트는 필수입니다'),
     body('toStyle').notEmpty().isIn(['formal', 'casual', 'conversational', 'professional']).withMessage('변환할 문체가 올바르지 않습니다'),
@@ -54,9 +60,11 @@ router.post('/convert-style',
   convertWritingStyle
 );
 
-// AI 탐지 위험도 평가
+/**
+ * AI 탐지 위험도 평가
+ */
 router.post('/assess-risk',
-  authenticate,
+  authenticateToken,
   [
     body('text').notEmpty().withMessage('평가할 텍스트는 필수입니다')
   ],
@@ -64,9 +72,11 @@ router.post('/assess-risk',
   assessAIDetectionRisk
 );
 
-// 사용자 AI 우회 처리 기록 조회
+/**
+ * 사용자 AI 우회 처리 기록 조회
+ */
 router.get('/history',
-  authenticate,
+  authenticateToken,
   [
     query('page').optional().isInt({ min: 1 }).withMessage('페이지는 1 이상의 정수여야 합니다'),
     query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('한 페이지 당 항목 수는 1-50 사이여야 합니다')
@@ -75,9 +85,11 @@ router.get('/history',
   getUserAIBypassHistory
 );
 
-// 특정 AI 우회 처리 결과 조회
-router.get('/:id',
-  authenticate,
+/**
+ * 특정 AI 우회 처리 결과 조회
+ */
+router.get('/result/:id',
+  authenticateToken,
   [
     param('id').isUUID().withMessage('유효하지 않은 결과 ID입니다')
   ],
@@ -85,9 +97,11 @@ router.get('/:id',
   getAIBypassResult
 );
 
-// AI 우회 처리 결과 삭제
-router.delete('/:id',
-  authenticate,
+/**
+ * AI 우회 처리 결과 삭제
+ */
+router.delete('/result/:id',
+  authenticateToken,
   [
     param('id').isUUID().withMessage('유효하지 않은 결과 ID입니다')
   ],

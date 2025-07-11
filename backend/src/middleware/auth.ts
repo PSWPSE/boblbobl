@@ -3,33 +3,29 @@ import { verifyToken, extractTokenFromHeader } from '../utils/jwt';
 import { ApiResponse } from '../types';
 import prisma from '../utils/database';
 
-// Request 타입 확장
+// Passport 타입 재정의
 declare global {
   namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-        email: string;
-        name: string;
-      };
+    interface User {
+      id: string;
+      email: string;
+      name: string;
+      userId?: string;
     }
   }
 }
 
-export interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    email: string;
-    name: string;
-  };
+// 타입 가드 함수
+export function isAuthenticated(req: Request): req is Request & { user: Express.User } {
+  return req.user !== undefined;
 }
 
 /**
- * JWT 토큰 검증 미들웨어
+ * JWT 토큰 검증 미들웨어 (표준)
  */
 export async function authenticateToken(
   req: Request,
-  res: Response<ApiResponse<any>>,
+  res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -67,6 +63,7 @@ export async function authenticateToken(
 
     // 사용자 정보를 request에 추가
     req.user = {
+      id: user.id,
       userId: user.id,
       email: user.email,
       name: user.name,
@@ -82,10 +79,10 @@ export async function authenticateToken(
 }
 
 /**
- * 간단한 인증 미들웨어 (썸네일 라우트용)
+ * 간단한 인증 미들웨어 (통일된 타입)
  */
 export async function authenticate(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
@@ -122,6 +119,7 @@ export async function authenticate(
 
     // 사용자 정보를 request에 추가
     req.user = {
+      id: user.id,
       userId: user.id,
       email: user.email,
       name: user.name,
@@ -160,6 +158,7 @@ export async function optionalAuthenticate(
 
       if (user) {
         req.user = {
+          id: user.id,
           userId: user.id,
           email: user.email,
           name: user.name,
@@ -212,7 +211,7 @@ export async function requireAdmin(
 }
 
 /**
- * 프리미엄 구독 확인 미들웨어
+ * 프리미엄 사용자 권한 확인 미들웨어
  */
 export async function requirePremium(
   req: Request,
@@ -228,6 +227,7 @@ export async function requirePremium(
       return;
     }
 
+    // 사용자 구독 상태 확인
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
       select: { subscription: true },

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '../utils/password';
 import { generateToken } from '../utils/jwt';
 import { ApiResponse, CreateUserInput } from '../types';
+import { isAuthenticated } from '../middleware/auth';
 import prisma from '../utils/database';
 
 /**
@@ -171,7 +172,7 @@ export async function login(req: Request, res: Response<ApiResponse<any>>): Prom
  */
 export async function getMe(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!isAuthenticated(req)) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.',
@@ -218,7 +219,7 @@ export async function getMe(req: Request, res: Response<ApiResponse<any>>): Prom
  */
 export async function changePassword(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!isAuthenticated(req)) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.',

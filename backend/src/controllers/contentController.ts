@@ -20,8 +20,11 @@ export interface RegenerateContentRequest {
  * AI 콘텐츠 생성
  */
 export async function generateAIContent(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
+  console.log('🎯 콘텐츠 생성 API 호출 시작');
+  
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
+      console.warn('❌ 인증 실패: 사용자 정보 없음');
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'
@@ -29,18 +32,23 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
       return;
     }
 
+    console.log('✅ 사용자 인증 확인:', { userId: req.user.userId });
+
     const { sourceDataId, guidelineId, additionalPrompt, contentType = 'blog', targetLength = 800 }: GenerateContentRequest = req.body;
 
-    // 입력 검증
+    console.log('📋 요청 데이터:', { sourceDataId, guidelineId, contentType, targetLength });
+
     if (!sourceDataId || !guidelineId) {
+      console.warn('❌ 필수 데이터 누락:', { sourceDataId, guidelineId });
       res.status(400).json({
         success: false,
-        error: '소스 데이터와 가이드라인을 선택해주세요.'
+        error: '소스 데이터 ID와 가이드라인 ID를 입력해주세요.'
       });
       return;
     }
 
     // 소스 데이터 조회
+    console.log('🔍 소스 데이터 조회 중:', sourceDataId);
     const sourceData = await prisma.sourceData.findFirst({
       where: {
         id: sourceDataId,
@@ -49,6 +57,7 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
     });
 
     if (!sourceData) {
+      console.warn('❌ 소스 데이터 없음:', sourceDataId);
       res.status(404).json({
         success: false,
         error: '소스 데이터를 찾을 수 없습니다.'
@@ -56,7 +65,13 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
       return;
     }
 
+    console.log('✅ 소스 데이터 조회 성공:', { 
+      filename: sourceData.filename, 
+      textLength: sourceData.extractedText?.length || 0 
+    });
+
     // 가이드라인 조회
+    console.log('🔍 가이드라인 조회 중:', guidelineId);
     const guideline = await prisma.contentGuideline.findFirst({
       where: {
         id: guidelineId,
@@ -65,6 +80,7 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
     });
 
     if (!guideline) {
+      console.warn('❌ 가이드라인 없음:', guidelineId);
       res.status(404).json({
         success: false,
         error: '가이드라인을 찾을 수 없습니다.'
@@ -72,12 +88,17 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
       return;
     }
 
-    // OpenAI API 요청 준비
+    console.log('✅ 가이드라인 조회 성공:', { 
+      name: guideline.name, 
+      type: guideline.type 
+    });
+
+    // AI 콘텐츠 생성 요청 구성
     const generationRequest: ContentGenerationRequest = {
-      sourceText: sourceData.extractedText,
+      sourceText: sourceData.extractedText || '',
       guideline: {
         name: guideline.name,
-        type: guideline.type,
+        type: guideline.type as 'keywords' | 'memo',
         keywords: guideline.keywords ? guideline.keywords as any : undefined,
         memo: guideline.memo || undefined
       },
@@ -86,10 +107,28 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
       targetLength
     };
 
+    console.log('🤖 AI 콘텐츠 생성 시작');
+    console.log('📝 생성 요청 상세:', { 
+      sourceTextLength: generationRequest.sourceText.length,
+      guidelineType: generationRequest.guideline.type,
+      contentType,
+      targetLength
+    });
+
     // AI 콘텐츠 생성
+    const startTime = Date.now();
     const aiResponse = await generateContent(generationRequest);
+    const endTime = Date.now();
+    
+    console.log('🎉 AI 콘텐츠 생성 완료:', { 
+      duration: `${endTime - startTime}ms`,
+      titleLength: aiResponse.title.length,
+      contentLength: aiResponse.content.length,
+      model: aiResponse.metadata.model
+    });
 
     // 데이터베이스에 저장
+    console.log('💾 데이터베이스 저장 중');
     const generatedContent = await prisma.generatedContent.create({
       data: {
         userId: req.user.userId,
@@ -98,7 +137,8 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
         title: aiResponse.title,
         content: aiResponse.content,
         summary: aiResponse.summary,
-        tags: aiResponse.tags,
+        tags: Array.isArray(aiResponse.tags) ? aiResponse.tags : [aiResponse.tags],
+        contentType: contentType,
         metadata: {
           ...aiResponse.metadata,
           generationRequest: {
@@ -106,9 +146,14 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
             contentType,
             targetLength
           }
-        },
+        } as any,
         status: 'draft'
       }
+    });
+
+    console.log('✅ 콘텐츠 생성 완료:', { 
+      contentId: generatedContent.id,
+      totalDuration: `${Date.now() - startTime}ms`
     });
 
     res.status(201).json({
@@ -118,7 +163,12 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
     });
 
   } catch (error) {
-    console.error('Content generation error:', error);
+    console.error('🚨 콘텐츠 생성 오류:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: req.user?.userId
+    });
+    
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : '콘텐츠 생성 중 오류가 발생했습니다.'
@@ -131,7 +181,7 @@ export async function generateAIContent(req: Request, res: Response<ApiResponse<
  */
 export async function regenerateAIContent(req: Request, res: Response<ApiResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         error: '인증이 필요합니다.'
@@ -161,7 +211,7 @@ export async function regenerateAIContent(req: Request, res: Response<ApiRespons
       }
     });
 
-    if (!existingContent) {
+    if (!existingContent || !existingContent.sourceData || !existingContent.guideline) {
       res.status(404).json({
         success: false,
         error: '콘텐츠를 찾을 수 없습니다.'
@@ -171,10 +221,10 @@ export async function regenerateAIContent(req: Request, res: Response<ApiRespons
 
     // 원본 생성 요청 재구성
     const originalRequest: ContentGenerationRequest = {
-      sourceText: existingContent.sourceData.extractedText,
+      sourceText: existingContent.sourceData.extractedText || '',
       guideline: {
         name: existingContent.guideline.name,
-        type: existingContent.guideline.type,
+        type: existingContent.guideline.type as 'keywords' | 'memo',
         keywords: existingContent.guideline.keywords ? existingContent.guideline.keywords as any : undefined,
         memo: existingContent.guideline.memo || undefined
       },
@@ -205,10 +255,13 @@ export async function regenerateAIContent(req: Request, res: Response<ApiRespons
         title: aiResponse.title,
         content: aiResponse.content,
         summary: aiResponse.summary,
-        tags: aiResponse.tags,
+        tags: Array.isArray(aiResponse.tags) ? aiResponse.tags : [aiResponse.tags],
         metadata: {
-          ...aiResponse.metadata,
-          generationRequest: originalRequest,
+          generationRequest: {
+            additionalPrompt: originalRequest.additionalPrompt,
+            contentType: originalRequest.contentType,
+            targetLength: originalRequest.targetLength
+          },
           regenerationHistory: [
             ...(existingContent.metadata && 
                 typeof existingContent.metadata === 'object' && 
@@ -216,11 +269,13 @@ export async function regenerateAIContent(req: Request, res: Response<ApiRespons
                 ? (existingContent.metadata.regenerationHistory as any[]) || []
                 : []),
             {
-              request: modificationRequest,
-              timestamp: new Date().toISOString()
+              modificationRequest,
+              timestamp: new Date().toISOString(),
+              previousContent: existingContent.content
             }
-          ]
-        }
+          ],
+          ...aiResponse.metadata
+        } as any
       }
     });
 
@@ -244,7 +299,7 @@ export async function regenerateAIContent(req: Request, res: Response<ApiRespons
  */
 export async function getGeneratedContents(req: Request, res: Response<PaginatedResponse<any>>): Promise<void> {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       res.status(401).json({
         success: false,
         data: [],
@@ -282,12 +337,14 @@ export async function getGeneratedContents(req: Request, res: Response<Paginated
         include: {
           sourceData: {
             select: {
+              id: true,
               filename: true,
               fileType: true
             }
           },
           guideline: {
             select: {
+              id: true,
               name: true,
               type: true
             }
@@ -297,8 +354,6 @@ export async function getGeneratedContents(req: Request, res: Response<Paginated
       prisma.generatedContent.count({ where })
     ]);
 
-    const totalPages = Math.ceil(total / limit);
-
     res.json({
       success: true,
       data: contents,
@@ -306,7 +361,7 @@ export async function getGeneratedContents(req: Request, res: Response<Paginated
         page,
         limit,
         total,
-        totalPages
+        totalPages: Math.ceil(total / limit)
       }
     });
 

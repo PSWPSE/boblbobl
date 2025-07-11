@@ -1,0 +1,77 @@
+---
+alwaysApply: true
+description: BlogCraft AI 서버 설정 및 환경변수 기준
+---
+
+# BlogCraft AI 서버 설정 기준
+
+## 🚀 서버 포트 설정
+- **백엔드**: http://localhost:8000
+- **프론트엔드**: http://localhost:3000
+- **Prisma Studio**: http://localhost:5555
+
+## 🗄️ 데이터베이스 설정
+- **Provider**: PostgreSQL (Railway)
+- **Connection URL**: `postgresql://postgres:TmdGFdaksSgPPbAsDsAnHlTDPpWjkqUu@shortline.proxy.rlwy.net:54002/railway`
+- **Prisma Schema**: `provider = "postgresql"`
+
+## 🔐 환경변수 설정 (.env)
+
+### JWT 설정
+```
+JWT_SECRET=bdb892b35ec2e50210a14b87bc5a257d
+```
+
+### 데이터베이스 설정
+```
+DATABASE_URL="postgresql://postgres:TmdGFdaksSgPPbAsDsAnHlTDPpWjkqUu@shortline.proxy.rlwy.net:54002/railway"
+```
+
+### OpenAI API 설정
+```
+OPENAI_API_KEY=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
+```
+
+### 클라이언트 URL
+```
+CLIENT_URL=http://localhost:3000
+```
+
+### Google OAuth 설정
+```
+GOOGLE_CLIENT_ID=663459245926-s568h91gdsu8q33nks47l4umad616uu9.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+```
+
+### Naver OAuth 설정
+```
+NAVER_CLIENT_ID=Ill7zizD7cfU7FiVwH74
+NAVER_CLIENT_SECRET=e6MnDF8vxy
+```
+
+### Cloudinary 설정
+```
+CLOUDINARY_CLOUD_NAME=dfrqgjdtd
+CLOUDINARY_API_KEY=674531278499429
+CLOUDINARY_API_SECRET=3s1ldvQ6qVAh7yOzsSmlf9aR2Sc
+```
+
+## 🔧 중요 설정 규칙
+
+1. **데이터베이스 연결**: 항상 Railway PostgreSQL 사용
+2. **환경변수**: 위의 설정값들을 절대 변경하지 않음
+3. **포트 설정**: 백엔드 8000, 프론트엔드 3000 포트 사용
+4. **OAuth 설정**: 현재 설정된 Google/Naver OAuth 자격증명 유지
+5. **API 키**: OpenAI, Cloudinary API 키 보안 유지
+
+## 📁 프로젝트 구조 기준
+- Backend: Express.js + TypeScript + Prisma
+- Frontend: Next.js 15 + React 19 + Tailwind CSS
+- Database: Railway PostgreSQL
+- Authentication: Passport.js (Google/Naver OAuth)
+
+## ⚠️ 주의사항
+- 환경변수를 변경할 때는 반드시 이 커서룰을 참조
+- 데이터베이스 연결 문제 시 Railway PostgreSQL 설정 확인
+- OAuth 오류 시 Google/Naver 자격증명 재확인
+- 서버 포트 충돌 시 충돌 원인 해결 후 정해진 포트 사용 (백엔드 8000, 프론트엔드 3000)

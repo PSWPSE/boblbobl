@@ -131,4 +131,47 @@ export interface FileUpload {
   mimetype: string;
   size: number;
   buffer: Buffer;
-} 
+}
+
+// AI 우회 관련 메타데이터 타입
+export interface AIBypassMetadata {
+  humanizationScore?: number;
+  detectionRisk?: 'low' | 'medium' | 'high';
+  changesCount?: number;
+  originalLength?: number;
+  processedLength?: number;
+  processingTime?: number;
+}
+
+// 썸네일 관련 메타데이터 타입
+export interface ThumbnailMetadata {
+  generationType?: string;
+  prompt?: string;
+  style?: string;
+  aspectRatio?: string;
+  imageUrl?: string;
+  optimizedUrl?: string;
+}
+
+// 통합 메타데이터 타입
+export interface ContentMetadata {
+  wordCount?: number;
+  charCount?: number;
+  readingTime?: number;
+  seoScore?: number;
+  keywordCount?: number;
+  analysisDate?: string;
+  // AI 우회 관련
+  humanizationScore?: number;
+  detectionRisk?: 'low' | 'medium' | 'high';
+  changesCount?: number;
+  // 썸네일 관련
+  generationType?: string;
+  prompt?: string;
+  style?: string;
+  aspectRatio?: string;
+  imageUrl?: string;
+  optimizedUrl?: string;
+  // 기타
+  [key: string]: any;
+}

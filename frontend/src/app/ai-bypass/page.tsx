@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,31 +13,33 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Bot, 
-  Shield, 
-  FileText, 
-  Eye, 
-  Zap, 
-  CheckCircle,
   AlertTriangle,
-  XCircle,
+  BarChart3,
+  BookOpen,
+  Bot,
+  CheckCircle,
+  Clock,
   Copy,
   Download,
-  Trash2,
-  RefreshCw,
-  User,
-  MessageSquare,
-  BookOpen,
-  TrendingUp,
-  Users,
-  BarChart3,
-  Clock,
-  Settings,
+  Eye,
+  FileText,
   Info,
   Lightbulb,
+  MessageSquare,
+  RefreshCw,
+  Settings,
+  Shield,
   Target,
-  Wand2
+  Trash2,
+  TrendingUp,
+  User,
+  Users,
+  Wand2,
+  XCircle,
+  Zap
 } from 'lucide-react';
+import { apiDelete, apiGet, apiPost } from '@/lib/api';
+import { showError, showSuccess } from '@/lib/notifications';
 
 interface AIBypassResult {
   id?: string;
@@ -77,7 +79,7 @@ interface RiskAssessment {
 }
 
 export default function AIBypassPage() {
-  const { user, token } = useAuthStore();
+  const { user } = useAuthStore();
   const router = useRouter();
   
   const [isProcessing, setIsProcessing] = useState(false);
@@ -114,24 +116,18 @@ export default function AIBypassPage() {
 
   const fetchHistory = async () => {
     try {
-      const response = await fetch('/api/ai-bypass/history', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      
+      const data = await apiGet('/api/ai-bypass/history');
       if (data.success) {
         setHistory(data.data.history);
       }
     } catch (error) {
-      console.error('AI 우회 기록 로드 실패:', error);
+      showError('AI 우회 기록을 불러오는데 실패했습니다.');
     }
   };
 
   const handleAIBypass = async () => {
     if (!formData.text) {
-      alert('처리할 텍스트를 입력해주세요.');
+      showError('처리할 텍스트를 입력해주세요.');
       return;
     }
 
@@ -142,35 +138,26 @@ export default function AIBypassPage() {
         .map(keyword => keyword.trim())
         .filter(keyword => keyword);
 
-      const response = await fetch('/api/ai-bypass/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          text: formData.text,
-          humanizationLevel: formData.humanizationLevel,
-          writingStyle: formData.writingStyle,
-          targetLanguage: formData.targetLanguage,
-          preserveKeywords: keywordsArray,
-          addPersonalTouch: formData.addPersonalTouch,
-          varyParagraphLength: formData.varyParagraphLength,
-          insertNaturalTransitions: formData.insertNaturalTransitions
-        })
+      const data = await apiPost('/api/ai-bypass/process', {
+        text: formData.text,
+        humanizationLevel: formData.humanizationLevel,
+        writingStyle: formData.writingStyle,
+        targetLanguage: formData.targetLanguage,
+        preserveKeywords: keywordsArray,
+        addPersonalTouch: formData.addPersonalTouch,
+        varyParagraphLength: formData.varyParagraphLength,
+        insertNaturalTransitions: formData.insertNaturalTransitions
       });
-
-      const data = await response.json();
       
       if (data.success) {
         setResult(data.data);
         fetchHistory();
+        showSuccess('AI 탐지 우회 처리가 완료되었습니다.');
       } else {
-        alert(`AI 탐지 우회 처리 실패: ${data.error}`);
+        showError(`AI 탐지 우회 처리 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('AI 우회 처리 오류:', error);
-      alert('AI 탐지 우회 처리 중 오류가 발생했습니다.');
+      showError('AI 탐지 우회 처리 중 오류가 발생했습니다.');
     } finally {
       setIsProcessing(false);
     }
@@ -178,25 +165,16 @@ export default function AIBypassPage() {
 
   const handleHumanize = async () => {
     if (!formData.text) {
-      alert('자연화할 텍스트를 입력해주세요.');
+      showError('자연화할 텍스트를 입력해주세요.');
       return;
     }
 
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/ai-bypass/humanize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          text: formData.text,
-          level: formData.humanizationLevel
-        })
+      const data = await apiPost('/api/ai-bypass/humanize', {
+        text: formData.text,
+        level: formData.humanizationLevel
       });
-
-      const data = await response.json();
       
       if (data.success) {
         setResult({
@@ -207,12 +185,12 @@ export default function AIBypassPage() {
           detectionRisk: data.data.detectionRisk,
           recommendations: []
         });
+        showSuccess('텍스트 자연화가 완료되었습니다.');
       } else {
-        alert(`텍스트 자연화 실패: ${data.error}`);
+        showError(`텍스트 자연화 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('텍스트 자연화 오류:', error);
-      alert('텍스트 자연화 중 오류가 발생했습니다.');
+      showError('텍스트 자연화 중 오류가 발생했습니다.');
     } finally {
       setIsProcessing(false);
     }
@@ -220,26 +198,17 @@ export default function AIBypassPage() {
 
   const handleStyleConversion = async () => {
     if (!formData.text) {
-      alert('변환할 텍스트를 입력해주세요.');
+      showError('변환할 텍스트를 입력해주세요.');
       return;
     }
 
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/ai-bypass/convert-style', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          text: formData.text,
-          fromStyle: formData.fromStyle,
-          toStyle: formData.toStyle
-        })
+      const data = await apiPost('/api/ai-bypass/convert-style', {
+        text: formData.text,
+        fromStyle: formData.fromStyle,
+        toStyle: formData.toStyle
       });
-
-      const data = await response.json();
       
       if (data.success) {
         setResult({
@@ -250,12 +219,12 @@ export default function AIBypassPage() {
           detectionRisk: 'medium',
           recommendations: []
         });
+        showSuccess('문체 변환이 완료되었습니다.');
       } else {
-        alert(`문체 변환 실패: ${data.error}`);
+        showError(`문체 변환 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('문체 변환 오류:', error);
-      alert('문체 변환 중 오류가 발생했습니다.');
+      showError('문체 변환 중 오류가 발생했습니다.');
     } finally {
       setIsProcessing(false);
     }
@@ -263,33 +232,24 @@ export default function AIBypassPage() {
 
   const handleRiskAssessment = async () => {
     if (!formData.text) {
-      alert('평가할 텍스트를 입력해주세요.');
+      showError('평가할 텍스트를 입력해주세요.');
       return;
     }
 
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/ai-bypass/assess-risk', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          text: formData.text
-        })
+      const data = await apiPost('/api/ai-bypass/assess-risk', {
+        text: formData.text
       });
-
-      const data = await response.json();
       
       if (data.success) {
         setRiskAssessment(data.data);
+        showSuccess('위험도 평가가 완료되었습니다.');
       } else {
-        alert(`위험도 평가 실패: ${data.error}`);
+        showError(`위험도 평가 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('위험도 평가 오류:', error);
-      alert('위험도 평가 중 오류가 발생했습니다.');
+      showError('위험도 평가 중 오류가 발생했습니다.');
     } finally {
       setIsProcessing(false);
     }
@@ -297,22 +257,15 @@ export default function AIBypassPage() {
 
   const handleViewHistory = async (historyId: string) => {
     try {
-      const response = await fetch(`/api/ai-bypass/${historyId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await apiGet(`/api/ai-bypass/${historyId}`);
       
       if (data.success) {
         setSelectedHistory(data.data);
       } else {
-        alert(`기록 조회 실패: ${data.error}`);
+        showError(`기록 조회 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('기록 조회 오류:', error);
-      alert('기록 조회 중 오류가 발생했습니다.');
+      showError('기록 조회 중 오류가 발생했습니다.');
     }
   };
 
@@ -320,32 +273,25 @@ export default function AIBypassPage() {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      const response = await fetch(`/api/ai-bypass/${historyId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await apiDelete(`/api/ai-bypass/${historyId}`);
       
       if (data.success) {
         fetchHistory();
         if (selectedHistory?.id === historyId) {
           setSelectedHistory(null);
         }
+        showSuccess('기록이 삭제되었습니다.');
       } else {
-        alert(`삭제 실패: ${data.error}`);
+        showError(`삭제 실패: ${data.error}`);
       }
     } catch (error) {
-      console.error('삭제 오류:', error);
-      alert('삭제 중 오류가 발생했습니다.');
+      showError('삭제 중 오류가 발생했습니다.');
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('클립보드에 복사되었습니다.');
+    showSuccess('클립보드에 복사되었습니다.');
   };
 
   const getRiskColor = (risk: 'low' | 'medium' | 'high') => {

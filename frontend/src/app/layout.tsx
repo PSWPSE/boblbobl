@@ -1,39 +1,37 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import Navigation from "@/components/Navigation";
-import { Toaster } from "@/components/ui/sonner";
+import type { Metadata } from 'next';
+import React from 'react';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import Navigation from '@/components/Navigation';
+import AuthProvider from '@/components/AuthProvider';
+import { Toaster } from '@/components/ui/sonner';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter'
 });
 
 export const metadata: Metadata = {
-  title: "BlogCraft - AI 블로그 콘텐츠 생성 서비스",
-  description: "네이버 블로그에 최적화된 AI 콘텐츠 생성 웹서비스",
+  title: 'BlogCraft AI',
+  description: '블로그 콘텐츠를 위한 AI 도구',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="ko">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <div className="min-h-screen bg-gray-50">
+    <html lang="ko" className={inter.variable} suppressHydrationWarning>
+      <body className="font-inter antialiased" suppressHydrationWarning>
+        <AuthProvider>
           <Navigation />
-          <main>{children}</main>
-        </div>
-        <Toaster />
+          <main>
+            {children}
+          </main>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

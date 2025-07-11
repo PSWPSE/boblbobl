@@ -1,21 +1,21 @@
 import { Request, Response } from 'express';
 import { generateThumbnailImage, generateThumbnailWithText, generateTemplateBasedThumbnail, ThumbnailGenerationRequest } from '../utils/imageGenerator';
 import { PrismaClient } from '@prisma/client';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
 /**
  * 기본 썸네일 생성
  */
-export async function generateBasicThumbnail(req: AuthenticatedRequest, res: Response) {
+export async function generateBasicThumbnail(req: Request, res: Response) {
   try {
-    const { title, content, tags, style, aspectRatio, language } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
+    if (!isAuthenticated(req)) {
       return res.status(401).json({ error: '로그인이 필요합니다.' });
     }
+
+    const { title, content, tags, style, aspectRatio, language } = req.body;
+    const userId = req.user.userId!;
 
     // 입력 검증
     if (!title || !content) {
@@ -80,14 +80,14 @@ export async function generateBasicThumbnail(req: AuthenticatedRequest, res: Res
 /**
  * 텍스트 오버레이가 포함된 썸네일 생성
  */
-export async function generateThumbnailWithOverlay(req: AuthenticatedRequest, res: Response) {
+export async function generateThumbnailWithOverlay(req: Request, res: Response) {
   try {
-    const { title, content, tags, style, aspectRatio, language, overlayText } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
+    if (!isAuthenticated(req)) {
       return res.status(401).json({ error: '로그인이 필요합니다.' });
     }
+
+    const { title, content, tags, style, aspectRatio, language, overlayText } = req.body;
+    const userId = req.user.userId!;
 
     // 입력 검증
     if (!title || !content || !overlayText?.title) {
@@ -159,14 +159,14 @@ export async function generateThumbnailWithOverlay(req: AuthenticatedRequest, re
 /**
  * 템플릿 기반 썸네일 생성
  */
-export async function generateTemplatedThumbnail(req: AuthenticatedRequest, res: Response) {
+export async function generateTemplatedThumbnail(req: Request, res: Response) {
   try {
-    const { title, content, tags, style, aspectRatio, language, template } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
+    if (!isAuthenticated(req)) {
       return res.status(401).json({ error: '로그인이 필요합니다.' });
     }
+
+    const { title, content, tags, style, aspectRatio, language, template } = req.body;
+    const userId = req.user.userId!;
 
     // 입력 검증
     if (!title || !content || !template) {
@@ -236,19 +236,18 @@ export async function generateTemplatedThumbnail(req: AuthenticatedRequest, res:
 }
 
 /**
- * 사용자의 썸네일 목록 조회
+ * 사용자 썸네일 목록 조회
  */
-export async function getUserThumbnails(req: AuthenticatedRequest, res: Response) {
+export async function getUserThumbnails(req: Request, res: Response) {
   try {
-    const userId = req.user?.userId;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-
-    if (!userId) {
+    if (!isAuthenticated(req)) {
       return res.status(401).json({ error: '로그인이 필요합니다.' });
     }
 
-    const skip = (page - 1) * limit;
+    const userId = req.user.userId!;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
 
     const [thumbnails, totalCount] = await Promise.all([
       prisma.generatedContent.findMany({
@@ -259,7 +258,7 @@ export async function getUserThumbnails(req: AuthenticatedRequest, res: Response
         orderBy: {
           createdAt: 'desc'
         },
-        skip,
+        skip: offset,
         take: limit
       }),
       prisma.generatedContent.count({
@@ -270,20 +269,15 @@ export async function getUserThumbnails(req: AuthenticatedRequest, res: Response
       })
     ]);
 
-    const formattedThumbnails = thumbnails.map((thumbnail: any) => {
-      const content = JSON.parse(thumbnail.content);
+    const formattedThumbnails = thumbnails.map(item => {
+      const content = JSON.parse(item.content);
       return {
-        id: thumbnail.id,
-        title: thumbnail.title,
+        id: item.id,
+        title: item.title,
         type: content.type,
-        originalUrl: content.originalUrl,
-        optimizedUrl: content.optimizedUrl,
         thumbnailUrl: content.thumbnailUrl,
-        prompt: content.prompt,
-        style: content.style,
-        metadata: content.metadata,
-        createdAt: thumbnail.createdAt,
-        tags: thumbnail.tags
+        createdAt: item.createdAt,
+        tags: item.tags
       };
     });
 
@@ -301,7 +295,7 @@ export async function getUserThumbnails(req: AuthenticatedRequest, res: Response
     });
 
   } catch (error) {
-    console.error('🚨 Get user thumbnails error:', error);
+    console.error('🚨 User thumbnails retrieval error:', error);
     res.status(500).json({ 
       error: '썸네일 목록 조회 중 오류가 발생했습니다.',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -312,14 +306,14 @@ export async function getUserThumbnails(req: AuthenticatedRequest, res: Response
 /**
  * 특정 썸네일 조회
  */
-export async function getThumbnail(req: AuthenticatedRequest, res: Response) {
+export async function getThumbnail(req: Request, res: Response) {
   try {
-    const { id } = req.params;
-    const userId = req.user?.userId;
-
-    if (!userId) {
+    if (!isAuthenticated(req)) {
       return res.status(401).json({ error: '로그인이 필요합니다.' });
     }
+
+    const { id } = req.params;
+    const userId = req.user.userId!;
 
     const thumbnail = await prisma.generatedContent.findFirst({
       where: {
@@ -340,20 +334,14 @@ export async function getThumbnail(req: AuthenticatedRequest, res: Response) {
       data: {
         id: thumbnail.id,
         title: thumbnail.title,
-        type: content.type,
-        originalUrl: content.originalUrl,
-        optimizedUrl: content.optimizedUrl,
-        thumbnailUrl: content.thumbnailUrl,
-        prompt: content.prompt,
-        style: content.style,
-        metadata: content.metadata,
+        ...content,
         createdAt: thumbnail.createdAt,
         tags: thumbnail.tags
       }
     });
 
   } catch (error) {
-    console.error('🚨 Get thumbnail error:', error);
+    console.error('🚨 Thumbnail retrieval error:', error);
     res.status(500).json({ 
       error: '썸네일 조회 중 오류가 발생했습니다.',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -364,14 +352,14 @@ export async function getThumbnail(req: AuthenticatedRequest, res: Response) {
 /**
  * 썸네일 삭제
  */
-export async function deleteThumbnail(req: AuthenticatedRequest, res: Response) {
+export async function deleteThumbnail(req: Request, res: Response) {
   try {
-    const { id } = req.params;
-    const userId = req.user?.userId;
-
-    if (!userId) {
+    if (!isAuthenticated(req)) {
       return res.status(401).json({ error: '로그인이 필요합니다.' });
     }
+
+    const { id } = req.params;
+    const userId = req.user.userId!;
 
     const thumbnail = await prisma.generatedContent.findFirst({
       where: {
@@ -397,7 +385,7 @@ export async function deleteThumbnail(req: AuthenticatedRequest, res: Response) 
     });
 
   } catch (error) {
-    console.error('🚨 Delete thumbnail error:', error);
+    console.error('🚨 Thumbnail deletion error:', error);
     res.status(500).json({ 
       error: '썸네일 삭제 중 오류가 발생했습니다.',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -406,33 +394,15 @@ export async function deleteThumbnail(req: AuthenticatedRequest, res: Response) 
 }
 
 /**
- * 썸네일 생성 옵션 조회
+ * 썸네일 옵션 조회
  */
 export async function getThumbnailOptions(req: Request, res: Response) {
   try {
     const options = {
-      styles: [
-        { value: 'modern', label: '모던', description: '깔끔하고 현대적인 디자인' },
-        { value: 'minimal', label: '미니멀', description: '단순하고 우아한 디자인' },
-        { value: 'colorful', label: '다채로운', description: '생동감 있고 화려한 디자인' },
-        { value: 'professional', label: '전문적', description: '비즈니스 환경에 적합한 디자인' },
-        { value: 'illustration', label: '일러스트', description: '아티스틱하고 창의적인 디자인' },
-        { value: 'photorealistic', label: '사실적', description: '실제 사진 같은 고품질 디자인' }
-      ],
-      aspectRatios: [
-        { value: '16:9', label: '16:9 (가로)', description: '블로그 썸네일에 최적화' },
-        { value: '4:3', label: '4:3 (표준)', description: '일반적인 이미지 비율' },
-        { value: '1:1', label: '1:1 (정사각형)', description: '소셜 미디어 최적화' },
-        { value: '9:16', label: '9:16 (세로)', description: '모바일 스토리 형태' }
-      ],
-      templates: [
-        { value: 'tech', label: '기술/IT', description: '테크놀로지 관련 콘텐츠' },
-        { value: 'lifestyle', label: '라이프스타일', description: '일상생활 관련 콘텐츠' },
-        { value: 'business', label: '비즈니스', description: '업무 및 비즈니스 관련 콘텐츠' },
-        { value: 'travel', label: '여행', description: '여행 및 관광 관련 콘텐츠' },
-        { value: 'food', label: '음식', description: '요리 및 음식 관련 콘텐츠' },
-        { value: 'health', label: '건강', description: '건강 및 웰빙 관련 콘텐츠' }
-      ]
+      styles: ['modern', 'vintage', 'minimalist', 'bold', 'elegant'],
+      aspectRatios: ['16:9', '4:3', '1:1', '9:16'],
+      templates: ['tech', 'lifestyle', 'business', 'travel', 'food', 'health'],
+      languages: ['ko', 'en']
     };
 
     res.json({
@@ -441,7 +411,7 @@ export async function getThumbnailOptions(req: Request, res: Response) {
     });
 
   } catch (error) {
-    console.error('🚨 Get thumbnail options error:', error);
+    console.error('🚨 Thumbnail options retrieval error:', error);
     res.status(500).json({ 
       error: '썸네일 옵션 조회 중 오류가 발생했습니다.',
       details: error instanceof Error ? error.message : 'Unknown error'
