@@ -503,7 +503,7 @@ function analyzeRiskFactors(text: string) {
 }
 
 function calculateOverallRisk(factors: any): 'low' | 'medium' | 'high' {
-  const riskScore = Object.values(factors).reduce((sum: number, factor: any) => sum + factor.score, 0);
+  const riskScore = Object.values(factors).reduce((sum: number, factor: any) => sum + factor.score, 0) as number;
   const averageRisk = riskScore / Object.keys(factors).length;
 
   if (averageRisk >= 0.7) return 'high';
