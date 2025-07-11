@@ -1,4 +1,3 @@
-// import pdfParse from 'pdf-parse'; // 임시 비활성화
 import mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
 import axios from 'axios';

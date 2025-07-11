@@ -27,6 +27,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/express-session": "^1.18.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.10",
@@ -55,7 +56,6 @@
     "typescript": "^5.8.3"
   },
   "devDependencies": {
-    "@types/express-session": "^1.18.2",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
     "nodemon": "^3.1.10",

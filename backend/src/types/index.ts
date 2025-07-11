@@ -1,3 +1,5 @@
+import { Request } from 'express';
+
 // 사용자 관련 타입
 export interface User {
   id: string;
@@ -121,6 +123,16 @@ export interface JwtPayload {
   name: string;
   iat: number;
   exp: number;
+}
+
+// Express Request 확장 타입 (any 타입으로 간단히 처리)
+export interface AuthenticatedRequest {
+  user: {
+    userId: string;
+    email: string;
+    name: string;
+  };
+  [key: string]: any;
 }
 
 // 파일 업로드 관련 타입
