@@ -1,0 +1,199 @@
+---
+alwaysApply: true
+description: BlogCraft AI 배포 프로세스 및 운영 가이드
+---
+
+# 🚀 BlogCraft AI 배포 프로세스 가이드
+
+## 📋 현재 서비스 정보
+
+### 🌐 운영 중인 서비스 URL
+- **프론트엔드**: https://frontend-nr1wsn35d-dsvsdvsdvsds-projects.vercel.app
+- **백엔드**: https://boblbobl-production.up.railway.app
+
+### 🔧 플랫폼 정보
+- **프론트엔드**: Vercel (Next.js)
+- **백엔드**: Railway (Node.js + Express)
+- **데이터베이스**: PostgreSQL (Railway 제공)
+
+## 🚀 간편 배포 명령어
+
+### 기본 배포 (추천)
+```bash
+# 전체 서비스 배포 (백엔드 + 프론트엔드)
+./easy-deploy.sh all "feat: 새로운 기능 추가"
+
+# 백엔드만 배포
+./easy-deploy.sh backend "fix: 백엔드 버그 수정"
+
+# 프론트엔드만 배포
+./easy-deploy.sh frontend "style: UI 개선"
+```
+
+### 배포 스크립트 기능
+- ✅ 자동 사전 검증 (타입 체크, 린팅)
+- ✅ Git 커밋 및 푸시
+- ✅ 자동 배포 (Railway + Vercel)
+- ✅ 배포 후 서비스 상태 검증
+- ✅ 롤백 스크립트 자동 생성
+
+## ⚡ 빠른 배포 (수동)
+
+### 백엔드 Railway 배포
+```bash
+cd backend
+railway up
+```
+
+### 프론트엔드 Vercel 배포
+```bash
+cd frontend
+vercel --prod
+```
+
+## 🔄 롤백 절차
+
+### 자동 롤백 (배포 스크립트 사용 시)
+```bash
+# 배포 후 자동 생성되는 롤백 스크립트 실행
+./rollback.sh
+```
+
+### 수동 롤백
+```bash
+# 이전 커밋으로 되돌리기
+git reset --hard HEAD~1
+git push --force origin main
+
+# 서비스 재배포
+./easy-deploy.sh all "revert: 이전 버전으로 롤백"
+```
+
+## 🔐 환경 변수 관리
+
+### 백엔드 (Railway)
+```bash
+# 환경 변수 확인
+railway variables
+
+# 환경 변수 설정
+railway variables --set "VARIABLE_NAME=value"
+```
+
+### 프론트엔드 (Vercel)
+```bash
+# 환경 변수 확인
+vercel env ls
+
+# 환경 변수 추가
+vercel env add VARIABLE_NAME production
+```
+
+### 🔑 필수 환경 변수
+#### 백엔드 (Railway)
+- `ANTHROPIC_API_KEY`: Claude API 키
+- `CLIENT_URL`: 프론트엔드 도메인
+- `DATABASE_URL`: PostgreSQL 연결 문자열
+- `JWT_SECRET`: JWT 토큰 시크릿
+
+#### 프론트엔드 (Vercel)
+- `NEXT_PUBLIC_API_URL`: 백엔드 API URL
+
+## 🧪 배포 후 검증 체크리스트
+
+### 1. 서비스 상태 확인
+- [ ] 백엔드 Health Check: `curl https://boblbobl-production.up.railway.app/health`
+- [ ] 프론트엔드 접속: https://frontend-nr1wsn35d-dsvsdvsdvsds-projects.vercel.app
+- [ ] API 연동 테스트
+
+### 2. 주요 기능 테스트
+- [ ] 콘텐츠 생성 기능
+- [ ] 파일 업로드 기능
+- [ ] 사용자 인증 (Google OAuth)
+- [ ] SEO 분석 기능
+
+### 3. 성능 확인
+- [ ] 페이지 로딩 속도 (< 3초)
+- [ ] API 응답 시간 (< 15초)
+- [ ] 모바일 반응형 동작
+
+## 🚨 문제 해결 가이드
+
+### CORS 에러 발생 시
+1. 백엔드 CLIENT_URL 환경 변수 확인
+2. 프론트엔드 NEXT_PUBLIC_API_URL 환경 변수 확인
+3. 두 서비스 모두 재배포
+
+### 환경 변수 불일치 시
+```bash
+# 백엔드 환경 변수 업데이트
+railway variables --set "CLIENT_URL=https://frontend-nr1wsn35d-dsvsdvsdvsds-projects.vercel.app"
+
+# 프론트엔드 환경 변수 업데이트
+vercel env add NEXT_PUBLIC_API_URL production
+# 값: https://boblbobl-production.up.railway.app
+```
+
+### 배포 실패 시
+1. [easy-deploy.sh](mdc:easy-deploy.sh) 로그 확인
+2. CLI 도구 설치 상태 확인 (`railway`, `vercel`)
+3. 로그인 상태 확인 (`railway login`, `vercel login`)
+4. 네트워크 연결 상태 확인
+
+## 📊 모니터링 대시보드
+
+### Railway (백엔드)
+- URL: https://railway.app/dashboard
+- 메트릭: CPU, 메모리, 응답 시간
+- 로그: 실시간 서버 로그 확인
+
+### Vercel (프론트엔드)  
+- URL: https://vercel.com/dashboard
+- 메트릭: 배포 상태, 성능 지표
+- 분석: 사용자 트래픽, Core Web Vitals
+
+## 🔧 필수 CLI 도구
+
+### 설치 명령어
+```bash
+# Railway CLI
+npm install -g @railway/cli
+
+# Vercel CLI  
+npm install -g vercel
+
+# 로그인
+railway login
+vercel login
+```
+
+## ⚠️ 주의사항
+
+### 배포 전 확인사항
+- [ ] [backend/src/index.ts](mdc:backend/src/index.ts) - 백엔드 메인 파일
+- [ ] [frontend/src/lib/api.ts](mdc:frontend/src/lib/api.ts) - API 호출 설정
+- [ ] 환경 변수 설정 상태 확인
+
+### 금지사항
+- ❌ 프로덕션 환경에서 직접 코드 수정
+- ❌ 환경 변수를 커밋에 포함
+- ❌ API 키 하드코딩
+- ❌ 확인 없이 강제 푸시 (`git push --force`)
+
+## 🎯 배포 성공 기준
+
+### 성능 목표
+- 페이지 로딩: < 3초
+- API 응답: < 15초
+- 업타임: > 99%
+- 오류율: < 1%
+
+### 기능 요구사항
+- ✅ AI 콘텐츠 생성 정상 동작
+- ✅ 파일 업로드/다운로드 가능
+- ✅ OAuth 로그인 정상 동작
+- ✅ 모든 페이지 접근 가능
+
+---
+
+**💡 팁**: 배포 전에 항상 [easy-deploy.sh](mdc:easy-deploy.sh) 스크립트 사용을 권장합니다. 자동 검증과 롤백 기능이 포함되어 있어 안전합니다.
